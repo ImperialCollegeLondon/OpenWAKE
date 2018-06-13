@@ -67,7 +67,11 @@ class Flow(object):
         if not ( ( isinstance(flow, list) and all(isinstance(f, float) or isinstance(f, int) for f in flow_arr.flatten() ) ) or flow == None):
             raise TypeError("'flow' must be of type three-dimensional 'list', where the first dimension represents a row in space, the second a column in space, and the third a list of the flow components (x,y,z) at that point in space with three elements of type 'int' or 'float'")
         else:
+<<<<<<< HEAD
             self.flow = flow_arr if flow != None else np.arrat(default_flow)
+=======
+            self.flow = flow_arr if flow != None else np.array(default_flow)
+>>>>>>> Development
     
     def calc_wake_flow_at_point(self, pnt_coords, vel_red_factor_func):
         """
