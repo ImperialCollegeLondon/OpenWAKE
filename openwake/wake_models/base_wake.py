@@ -82,10 +82,8 @@ class BaseWakeModel(object):
                              [2*(bc-ad), aa+cc-bb-dd, 2*(cd+ab)],
                              [2*(bd+ac), 2*(cd-ab), aa+dd-bb-cc]])
 
-
-        # TODO IS IT RIGHT TO PROJECT FOR DIRECTION TOO
         axis_coords = np.cross(target, normalised_flow_at_turbine)
-        axis_dir = np.cross(target, normalised_turbine_dir)
+        #axis_dir = np.cross(target, normalised_turbine_dir)
 
         theta_coords = np.arccos(np.linalg.norm(np.dot(target, normalised_flow_at_turbine.reshape((-1,1)) ),2))
         #theta_dir = np.arccos(np.linalg.norm(np.dot(target, normalised_turbine_dir.reshape((-1,1)) ),2))

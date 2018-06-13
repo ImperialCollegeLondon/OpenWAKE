@@ -81,7 +81,7 @@ class BaseTurbine(object):
         fp = curve[1]
 
         # check if xp is always increasing and lengths are equal
-        if not (np.all(np.diff(xp) > 0) and and len(xp) == len(fp)):
+        if not (np.all(np.diff(xp) > 0) and len(xp) == len(fp)):
             raise ValueError("Values of fluid speed (first row of powerCoefficient) should be in increasing order")
         else:
             return np.interp(u, xp, fp)

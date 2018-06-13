@@ -16,8 +16,9 @@ class Flow(object):
     
     def __init__(self, x_coords, y_coords, z_coords, flow):
         # check if there is a y-coord for every x-coord, that the number of rows in each flow list correspond to a y-coord, and that the number of columns in each flow list correspond to an x-coord
-        if not ( ( len(x_coords) == len(y_coords) and len(y_coords) == len(z_coords)
-           and len(np.array(flow).flatten()) == (len(x_coords) * len(y_coords) * len(z_coords) * 3) )
+        
+        if not ( (len(x_coords) == len(y_coords) and len(y_coords) == len(z_coords)
+           and np.array(flow).shape == ( (len(x_coords), len(y_coords), len(z_coords),3 ) ))
            or x_coords == None or y_coords == None or z_coords == None or flow == None ):
             raise ValueError("'x_coords must be the same length as 'y_coords' and 'z_coords'. The shape of 'flow' should be (len(x_coords), len(y_coords), len(z_coords))")
         else:
@@ -61,11 +62,12 @@ class Flow(object):
 
     def set_flow(self, flow):
         default_flow = [[[]]]
-        np_flow = np.meshgrid(flow)
-        if not ((isinstance(flow, list) and np_flow.shape[2] == 3 and all(isinstance(f, float) or isinstance(f, int) for f in np_flow.flatten())) or flow == None):
+        #flow_mg = np.meshgrid(flow)
+        flow_arr = np.array(flow)
+        if not ( ( isinstance(flow, list) and all(isinstance(f, float) or isinstance(f, int) for f in flow_arr.flatten() ) ) or flow == None):
             raise TypeError("'flow' must be of type three-dimensional 'list', where the first dimension represents a row in space, the second a column in space, and the third a list of the flow components (x,y,z) at that point in space with three elements of type 'int' or 'float'")
         else:
-            self.flow = np_flow if flow != None else np.meshgrid(default_flow)
+            self.flow = flow_arr if flow != None else np.arrat(default_flow)
     
     def calc_wake_flow_at_point(self, pnt_coords, vel_red_factor_func):
         """
