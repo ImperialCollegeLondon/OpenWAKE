@@ -1,12 +1,12 @@
 """
-A BaseWakeModel class from which other wake models may be derived.
+A BaseWake class from which other wake models may be derived.
 """
 import numpy as np
 import math
 from turbine_models.base_turbine import BaseTurbine
-from wake_models.flow import Flow
+from flow_field_model.flow import Flow
 
-class BaseWakeModel(object):
+class BaseWake(object):
     """A base class from which wake models may be derived."""
 
     def __init__(self, turbine, flow):
@@ -46,7 +46,7 @@ class BaseWakeModel(object):
             return False
         else:
             wake_radius = self.calc_wake_radius(x0)
-            return wake_radius > abs(y0)
+            return wake_radius > abs(z0)
 
     def relative_position(self, pnt_coords):
         """
@@ -93,3 +93,6 @@ class BaseWakeModel(object):
                 
         #return np.array((pnt_coords-turbine_coords)*rotation_matrix_coords*rotation_matrix_dir).flatten()
         return np.array((pnt_coords-turbine_coords)*rotation_matrix_coords).flatten() 
+
+    def calc_flow_at_point(self, freestream_velocity, pnt_coords):
+        return (1 - self.calc_vrf_at_point(freestream_velocity, pnt_coords)) * freestream_velocity

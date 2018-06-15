@@ -1,12 +1,9 @@
-"""
-Implements the Jensen wake model.
-"""
-from wake_models.base_wake import BaseWakeModel
+from wake_models.base_wake import BaseWake
 from turbine_models.base_turbine import BaseTurbine
-from wake_models.flow import Flow
+from flow_field_model.flow import Flow
 import numpy as np
 
-class Jensen(BaseWakeModel):
+class Jensen(BaseWake):
     """Implements a Jensen wake model."""
     def __init__(self, turbine, flow, wake_decay):
         self.set_wake_decay(wake_decay)
@@ -34,7 +31,7 @@ class Jensen(BaseWakeModel):
         
         return turbine_radius + (wake_decay * x)
 
-    def calc_vrf_at_point(self, pnt_coords):
+    def calc_vrf_at_point(self, undisturbed_flow_at_point, pnt_coords):
         """
         Returns the a velocity reduction factor to scale the ambient flow by
         for another_turbine in wake of turbine, given that
