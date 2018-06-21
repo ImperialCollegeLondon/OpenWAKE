@@ -26,5 +26,5 @@ class GeometricSum(BaseWakeCombination):
 
         return np.prod(wake_freestream_velocity_ratio, axis=0)
 
-    def calc_flow_at_point(self, freestream_velocity, pnt_coords=None):
-        return self.combine() * np.linalg.norm(freestream_velocity,2)
+    def calc_flow_at_point(self, undisturbed_flow_at_point, pnt_coords=None):
+        return self.combine() * np.linalg.norm(undisturbed_flow_at_point,2)

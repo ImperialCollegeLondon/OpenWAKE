@@ -3,11 +3,12 @@ A base single turbine model from which others can be derived.
 """
 
 import numpy as np
+from helpers import *
 
 class BaseTurbine(object):
     """ Implements base turbine class."""
 
-    def __init__(self, radius, coords, top_clearance, direction, thrust_coefficient_curve, power_coefficient_curve):
+    def __init__(self, radius=10, coords=[0,0,0], top_clearance=np.inf, direction=[-1,0,0], thrust_coefficient_curve=[[],[]], power_coefficient_curve=[[],[]]):
         """ 
         param radius is radius of turbine blades param hub_height is distance from floor to hub
         param coords is a list of x,y,z coordinates, where z is the distance from sea level in the
@@ -43,14 +44,14 @@ class BaseTurbine(object):
     def get_power_coefficient_curve(self):
         return self.power_coefficient_curve
 
-    def calc_thrust_coefficient(self, flow_at_turbine):
+    def calc_thrust_coefficient(self, flow_mag_at_turbine):
 
         #turbine_direction = self.get_direction()
         turbine_coords = self.get_coords()
         #normalised_turbine_direction = turbine_direction/np.linalg.norm(turbine_direction,2)
         #u = np.dot(flow_at_turbine, normalised_turbine_direction)
 
-        u = np.linalg.norm(flow_at_turbine,2)
+        #u = np.linalg.norm(flow_at_turbine,2)
         
         curve = self.get_thrust_coefficient_curve()
         # flow speed data points
@@ -63,16 +64,16 @@ class BaseTurbine(object):
         if not (np.all(np.diff(xp) > 0) and len(xp) == len(fp)):
             raise ValueError("Values of fluid speed (first row of thrustCoefficient) should be in increasing order")
         else:
-            return np.interp(u, xp, fp)
+            return np.interp(flow_mag_at_turbine, xp, fp)
 
-    def calc_power_coefficient(self, flow_at_turbine):
+    def calc_power_coefficient(self, flow_mag_at_turbine):
         turbine_direction = self.get_direction()
         turbine_coords = self.get_coords()
 
         #normalised_turbine_direction = turbine_direction/np.linalg.norm(turbine_direction,2)
         #u = np.dot(flow_at_turbine, normalised_turbine_direction)
 
-        u = np.linalg.norm(flow_at_turbine,2)
+        #u = np.linalg.norm(flow_at_turbine,2)
         
         curve = self.get_power_coefficient_curve()
         # flow speed data points
@@ -84,54 +85,71 @@ class BaseTurbine(object):
         if not (np.all(np.diff(xp) > 0) and len(xp) == len(fp)):
             raise ValueError("Values of fluid speed (first row of powerCoefficient) should be in increasing order")
         else:
-            return np.interp(u, xp, fp)
+            return np.interp(flow_mag_at_turbine, xp, fp)
 
     def calc_area(self):
         return np.pi * self.get_radius()*2
      
     def set_radius(self, radius):
-        default_radius = 10
-        if not (isinstance(radius, (float,int)) or radius == None):
+        try:
+            assert isinstance(radius, (float,int))
+        except AssertionError:
             raise TypeError("'radius' must be of type 'float' or 'int'")
         else:
-            self.radius = radius if radius != None else default_radius
+            self.radius = radius
  
-    def set_coords(self, coords): 
-        default_coords = [0,0,0]
-        if not ((isinstance(coords, list) and len(coords) == 3 and all(isinstance(c, (float,int)) for c in coords) ) or coords == None): 
+    def set_coords(self, coords=[0,0,0]):
+        try:
+            assert isinstance(coords, list)
+            assert len(coords) == 3
+            assert all(isinstance(c, (float,int)) for c in coords)
+        except AssertionError:
             raise TypeError("'coords' must be of type 'list' with three elements.") 
         else: 
-            self.coords = np.array(coords) if coords != None else np.array(default_coords)
+            self.coords = np.array(coords)
 
-    def set_top_clearance(self, top_clearance):
-        default_top_clearance = 'inf'
-        if not (isinstance(top_clearance, (float,int)) or top_clearance == None):
+    def set_top_clearance(self, top_clearance = np.inf):
+        try:
+            assert isinstance(top_clearance, (float,int))
+        except AssertionError:
             raise TypeError("'top_clearance' must be of type 'float' or 'int'")
         else:
-            self.top_clearance = top_clearance if top_clearance != None else default_top_clearance
+            self.top_clearance = top_clearance
 
-    def set_direction(self, direction): 
-        default_direction = [-1,0, 0]
-        if not ((isinstance(direction, list) and len(direction) == 3 and all(isinstance(d, (float,int)) for d in direction) ) or direction == None): 
+    def set_direction(self, direction = [-1,0, 0]):
+        try:
+            assert isinstance(direction, list)
+            assert len(direction) == 3
+            assert all(isinstance(d, (float,int)) for d in direction)
+        except AssertionError:
             raise TypeError("'direction' must be of type 'list' with three elements.") 
         else: 
-            self.direction = np.array(direction) if direction != None else np.array(default_direction)
+            self.direction = np.array(direction)
 
-    def set_thrust_coefficient_curve(self, thrust_coefficient_curve): 
-        default_thrust_coefficient_curve = []
-        if not ((isinstance(thrust_coefficient_curve, list) and len(thrust_coefficient_curve[0]) == len(thrust_coefficient_curve[1]) and all(isinstance(c, (float,int)) for c in thrust_coefficient_curve[0]) and all(isinstance(c, float) or isinstance(c, int) for c in thrust_coefficient_curve[1])) or thrust_coefficient_curve == None): 
+    def set_thrust_coefficient_curve(self, thrust_coefficient_curve = [[],[]]): 
+        try:
+            assert isinstance(thrust_coefficient_curve, list)
+            assert len(thrust_coefficient_curve[0]) == len(thrust_coefficient_curve[1])
+            assert all(isinstance(c, (float,int)) for c in thrust_coefficient_curve[0])
+            assert all(isinstance(c, float) or isinstance(c, int) for c in thrust_coefficient_curve[1])
+        except AssertionError:
             raise TypeError("'thrust_coefficient_curve' must be of type two-demensional 'list' where the first nested list are the flow speeds and the second nested list are the corresponding thrust coefficients, where both lists are the same length and all elements are integers or floats.") 
         else:
-            self.thrust_coefficient_curve = np.array(thrust_coefficient_curve) if thrust_coefficient_curve != None else np.array(default_thrust_coefficient_curve)
+            self.thrust_coefficient_curve = np.array(thrust_coefficient_curve)
 
-    def set_power_coefficient_curve(self, power_coefficient_curve): 
-        default_power_coefficient_curve = []
-        if not ((isinstance(power_coefficient_curve, list) and len(power_coefficient_curve[0]) == len(power_coefficient_curve[1]) and all(isinstance(c, (float,int)) for c in power_coefficient_curve[0]) and all(isinstance(c, float) or isinstance(c, int) for c in power_coefficient_curve[1])) or power_coefficient_curve == None): 
+    def set_power_coefficient_curve(self, power_coefficient_curve = [[],[]]): 
+        try:
+            assert isinstance(power_coefficient_curve, list)
+            assert len(power_coefficient_curve[0]) == len(power_coefficient_curve[1])
+            assert all(isinstance(c, (float,int)) for c in power_coefficient_curve[0])
+            assert all(isinstance(c, float) or isinstance(c, int) for c in power_coefficient_curve[1])
+        except AssertionError:
             raise TypeError("'power_coefficient_curve' must be of type two-demensional 'list'  where the first nested list are the flow speeds and the second nested list are the corresponding power coefficients, where both lists are the same length and all elements are integers or floats.")
         else:
-            self.power_coefficient_curve = np.array(power_coefficient_curve) if power_coefficient_curve != None else np.array(default_power_coefficient_curve)
+            self.power_coefficient_curve = np.array(power_coefficient_curve)
 
     def calc_power_op(self, flow_at_turbine):
+        #TODO avaerage over turbine rotor area
         k1, k2, rho = 1/2, 3, 1024
         power_coefficient = self.calc_power_coefficient(flow_at_turbine)
         u = np.linalg.norm(flow_at_turbine, 2)

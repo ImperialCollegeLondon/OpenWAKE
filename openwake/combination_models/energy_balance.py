@@ -30,5 +30,5 @@ class EnergyBalance(BaseWakeCombination):
 
         return energy_balance_sum
 
-    def calc_flow_at_point(self, freestream_velocity, pnt_coords=None):
-        return (np.linalg.norm(freestream_velocity,2)**2 - self.combine())**0.5
+    def calc_flow_at_point(self, undisturbed_flow_at_point, pnt_coords=None):
+        return (np.linalg.norm(undisturbed_flow_at_point,2)**2 - self.combine())**0.5

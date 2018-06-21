@@ -1,5 +1,11 @@
 import numpy as np
 import matplotlip.pyplot as plt
+"""
+from mpl_toolkits.mplot3d import Axes3D
+from IPython import embed
+from matplotlib import cm
+from matplotlib.ticker import LinearLocator, FormatStrFormatter
+"""
 
 def plot_2d_wake():
     wakePlot, wakeAx = plt.subplots()
