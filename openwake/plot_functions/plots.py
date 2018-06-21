@@ -57,11 +57,10 @@ def plot_turbine_location(turbine):
     locAx.set_ylim(0,5)
     plt.show()
 
-def plot_wake_2d(wakeInst, turbine, flow):
+def plot_wake_2d(wakeFieldInst, wakeCombinationInst, turbineFieldInst, flowFieldInst):
  
     flowArr = flow.get_flow()
     flowArrShape = flowArr.shape
-    turbine_radius = turbine.get_radius()
 
     # for every point in flow, recompute based on velocity reduction factor
     # provide with vector of vel_red_factors
@@ -72,6 +71,7 @@ def plot_wake_2d(wakeInst, turbine, flow):
     # for 2d plot, set y equal to incoming freestream velocity y to convert to 2d
     #y = flowInst.get_flow_at_point(turbineInst.get_coords())[1]
     y = turbine.get_coords()[1]
+    turbine_radius = turbine.get_radius()
     # x and z components of quiver coordinates
     x, r = [], []
     undisturbedFlowContour = np.zeros((flowArrShape[0],flowArrShape[1],2))
@@ -95,6 +95,8 @@ def plot_wake_2d(wakeInst, turbine, flow):
     u, w = np.meshgrid(x, r)
     xMin = np.amin(x); xMax = np.amax(x)
     rMin = np.amin(r); rMax = np.amax(r)
+    #xMin = -turbine_radius; xMax = 4 * turbine_radius
+    #rMin = -turbine_radius; rMax = turbine_radius
     
     undisturbedWakePlot, undisturbedWakeAx = plt.subplots()
     turbineRect = Rectangle((0, -turbine_radius), 1, 2 * turbine_radius, hatch = '//')
@@ -120,14 +122,14 @@ def plot_wake_2d(wakeInst, turbine, flow):
     disturbedWakeAx.contourf(u, w, np.transpose(np.linalg.norm(disturbedFlowContour,2,2)), cmap='bwr')
     plt.show()
 
-    x, r = np.meshgrid(x, r)
+    x, r = np.meshgrid(x, r, indexing='ij')
 
     undisturbedFlowFlattened = np.array(undisturbedFlowContour).flatten()
     u = [i for i in undisturbedFlowFlattened][0:undisturbedFlowFlattened.size:2]
     w = [i for i in undisturbedFlowFlattened][1:undisturbedFlowFlattened.size:2]
     
     undisturbedFlowPlt, undisturbedFlowAx = plt.subplots()
-    undisturbedFlowAx.quiver(r, x, u, w, scale=90, alpha = 0.9)
+    undisturbedFlowAx.quiver(x, r, u, w, scale=200, alpha = 0.9)
     turbineRect = Rectangle((0, -turbine_radius), 1, 2 * turbine_radius, hatch = '//')
     undisturbedFlowAx.add_patch(turbineRect)
     undisturbedFlowAx.set_xlabel('Longitudinal Distance, r (m)')
@@ -141,7 +143,7 @@ def plot_wake_2d(wakeInst, turbine, flow):
     w = [i for i in disturbedFlowFlattened][1:disturbedFlowFlattened.size:2]
     
     disturbedFlowPlt, disturbedFlowAx = plt.subplots()
-    disturbedFlowAx.quiver(r, x, u, w, scale=90, alpha = 0.9)
+    disturbedFlowAx.quiver(x, r, u, w, scale=200, alpha = 0.9)
     turbineRect = Rectangle((0, -turbine_radius), 1, 2 * turbine_radius, hatch = '//')
     disturbedFlowAx.add_patch(turbineRect)
     disturbedFlowAx.set_xlabel('Longitudinal Distance, r (m)')

@@ -6,6 +6,20 @@ from helpers import *
 from turbine_models.base_turbine import BaseTurbine
 from flow_field_model.flow import Flow
 
+class WakeField(object):
+    def __init__(self, wake_list = []):
+        self.wakes = []
+        self.add_wakes(wake_list)
+
+    def add_wakes(self, wake_list = []):
+        self.wakes = self.wakes + [w for w in wake_list]
+
+    def get_wakes(self):
+        return np.array(self.wakes)
+
+    def get_num_wakes(self):
+        return self.get_wakes.size
+
 class BaseWake(object):
     """A base class from which wake models may be derived."""
 
@@ -40,13 +54,21 @@ class BaseWake(object):
         else:
             self.flow = flow
 
-    def get_flow_mag_at_turbine(self):
+    def get_flow_mag_at_turbine(self, flow_calc_func = None):
         turbine = self.get_turbine()
         turbine_coords = turbine.get_coords()
         flow = self.get_flow()
-        flow_at_turbine = flow.get_flow_at_point(turbine_coords)
-        u_0 = np.linalg.norm(flow_at_turbine, 2)
-        return u_0
+        undisturbed_flow_at_turbine = flow.get_flow_at_point(turbine_coords)
+        undisturbed_flow_mag_at_turbine = np.linalg.norm(undisturbed_flow_at_turbine, 2)
+
+        if flow_calc_func == None:
+            return undisturbed_flow_mag_at_turbine 
+        else:
+            disturbed_flow_at_turbine = flow_calc_func(undisturbed_flow_at_turbine, turbine_coords)
+            disturbed_flow_mag_at_turbine = np.linalg.norm(disturbed_flow_at_turbine,2)\
+                                            if isinstance(disturbed_flow_at_turbine, (list, np.ndarray))\
+                                            else disturbed_flow_at_turbine
+            return disturbed_flow_mag_at_turbine
 
     def is_in_wake(self, pnt_coords):
 
@@ -63,6 +85,14 @@ class BaseWake(object):
         else:
             wake_radius = self.calc_wake_radius(pnt_coords)
             return wake_radius > abs(z_rel)
+
+    def relative_inx(self, pnt_coords):
+        flow = self.get_flow()
+        x_coords, y_coords, z_coords = flow.get_x_coords(), flow.get_x_coords(), flow.get_z_coords()
+        rel_pnt_coords = self.relative_position(pnt_coords)
+        dx, dy, dz = abs(x_coords[1] - x_coords[0]), abs(y_coords[1] - y_coords[0]), abs(z_coords[1] - z_coords[0])
+        rel_x_inx, rel_y_inx, rel_z_inx = int(rel_pnt_coords[0]/dx), int(rel_pnt_coords[1]/dy), int(rel_pnt_coords[2]/dz)
+        return np.array([rel_x_inx, rel_y_inx, rel_z_inx])
 
     def relative_position(self, pnt_coords):
         """

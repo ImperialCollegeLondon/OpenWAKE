@@ -10,7 +10,17 @@ print(pl.__version__) # requires version >= 1.9.0
 farm_name = "Middelgrunden"
 file_name = 'middelgrunden.yml'
 
-wtl = WTLayout(file_name)
+
+import os
+import sys
+
+src_dir = '/'.join([os.getcwd().split('/tests')[0],'openwake'])
+if src_dir not in sys.path:
+    sys.path.append(src_dir)
+    
+farm_dir = '/'.join([src_dir,'turbine_farm_models'])
+
+wtl = WTLayout('/'.join([farm_dir,file_name]))
 
 wtl.plot_location((32,'U'),layout={'title': farm_name+' location'})
 

@@ -10,7 +10,7 @@ class Larsen(BaseWake):
     https://www.researchgate.net/profile/Jie_Zhang37/publication/265844008_Impact_of_Different_Wake_Models_On_the_Estimation_of_Wind_Farm_Power_Generation/links/561703e208ae40a7199a52ac/Impact-of-Different-Wake-Models-On-the-Estimation-of-Wind-Farm-Power-Generation.pdf
     """
 
-    def __init__(self, turbine = BaseTurbine(), flow= Flow(), wake_decay = 0.03, ambient_intensity = 0.1):
+    def __init__(self, turbine = BaseTurbine(), flow= Flow(), wake_decay = 0.3, ambient_intensity = 0.1):
         self.set_wake_decay(wake_decay)
         super(Larsen, self).__init__(turbine, flow)
         self.set_ambient_intensity(ambient_intensity)
@@ -72,7 +72,7 @@ class Larsen(BaseWake):
     def get_ambient_intensity(self):
         return self.ambient_intensity
     
-    def set_wake_decay(self, wake_decay = 0.03):
+    def set_wake_decay(self, wake_decay = 0.3):
         try:
             assert isinstance(wake_decay, float)
         except AssertionError:
@@ -126,7 +126,7 @@ class Larsen(BaseWake):
         """
 
         turbine = self.get_turbine()
-        turbine_diameter = 2* turbine.get_radius()
+        turbine_diameter = 2 * turbine.get_radius()
         u_0 = self.get_flow_mag_at_turbine()
         thrust_coefficient = turbine.calc_thrust_coefficient(u_0)
         rotor_disc_area = turbine.calc_area()
@@ -147,9 +147,12 @@ class Larsen(BaseWake):
         """
         # check if point is in wake caused by turbine
         if self.is_in_wake(pnt_coords):
-            x = self.calc_distance_along_flow(pnt_coords) 
-            r = self.calc_dist_from_wake_centre(pnt_coords)
-
+            #x = self.calc_distance_along_flow(pnt_coords) 
+            #r = self.calc_dist_from_wake_centre(pnt_coords)
+            
+            rel_pnt_coords = self.relative_position(pnt_coords)
+            rel_x_coord, rel_r_coord = rel_pnt_coords[0], rel_pnt_coords[2]
+            
             turbine = self.get_turbine()
             hub_height = turbine.get_coords()[2]
             ambient_intensity = self.get_ambient_intensity()
@@ -157,21 +160,20 @@ class Larsen(BaseWake):
             u_0 = self.get_flow_mag_at_turbine()
             thrust_coefficient = turbine.calc_thrust_coefficient(u_0)
             rotor_disc_area = turbine.calc_area()
-            hub_height = turbine.get_coords()[2]
             
             prandtl_mixing = self.calc_prandtl_mixing(thrust_coefficient, turbine_diameter, rotor_disc_area, hub_height, ambient_intensity)
             x0 = self.calc_x0(thrust_coefficient, turbine_diameter, hub_height, ambient_intensity)
 
             k1, k2, k3, k4, k5, k6, k7, k8, k9 = 1/3, 3/2, 3, -1/2, 3/10, -1/5, 17.5, 1/9, 2
             
-            bracket1 = thrust_coefficient * rotor_disc_area / (x+x0)**k9
-            bracket2 = k3 * prandtl_mixing**k9 * thrust_coefficient * rotor_disc_area * (x+x0)
+            bracket1 = thrust_coefficient * rotor_disc_area / (rel_x_coord+x0)**k9
+            bracket2 = k3 * prandtl_mixing**k9 * thrust_coefficient * rotor_disc_area * (rel_x_coord+x0)
             bracket3 = k7 / np.pi
             bracket4 = k3 * prandtl_mixing**k9
             with np.errstate(all="ignore"):
-                velocity_deficit = u_0 * k8 * (bracket1**k1) * ((r**k2 * bracket2**k4) - (bracket3**k5 * bracket4**k6))**k9
-            #TODO check this
-            velocity_reduction_factor = velocity_deficit/u_0 if np.isnan(velocity_deficit) == False and np.isinf(velocity_deficit) == False else 0
+                velocity_deficit = u_0 * k8 * (bracket1**k1) * ((abs(rel_r_coord)**k2 * bracket2**k4) - (bracket3**k5 * bracket4**k6))**k9
+    
+            velocity_reduction_factor = velocity_deficit/u_0# if np.isnan(velocity_deficit) == False and np.isinf(velocity_deficit) == False else 0
             return velocity_reduction_factor
         else:
             return 0

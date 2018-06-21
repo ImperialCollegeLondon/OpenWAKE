@@ -5,6 +5,20 @@ A base single turbine model from which others can be derived.
 import numpy as np
 from helpers import *
 
+class TurbineField(object):
+    def __init__(self, turbine_list = []):
+        self.turbines = []
+        self.add_turbines(turbine_list)
+
+    def add_turbines(self, turbine_list = []):
+        self.turbines = self.turbines + [t for t in turbine_list]
+
+    def get_turbines(self):
+        return np.array(self.turbines)
+
+    def get_num_turbines(self):
+        return self.get_turbines.size
+
 class BaseTurbine(object):
     """ Implements base turbine class."""
 
@@ -152,9 +166,9 @@ class BaseTurbine(object):
         #TODO avaerage over turbine rotor area
         k1, k2, rho = 1/2, 3, 1024
         power_coefficient = self.calc_power_coefficient(flow_at_turbine)
-        u = np.linalg.norm(flow_at_turbine, 2)
         area = self.calc_area()
-        power_extracted = k1 * rho * u**k2 * area
+        flow_mag_at_turbine = np.linalg.norm(flow_at_turbine,2) if isinstance(flow_at_turbine, (list, np.ndarray)) else flow_at_turbine
+        power_extracted = k1 * rho * flow_mag_at_turbine**k2 * area
         return power_extracted
 
 ##    def calc_average_vrf(self, combined_vrf):

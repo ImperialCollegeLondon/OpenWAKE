@@ -27,7 +27,7 @@ class Flow(object):
             assert isinstance(z_coords, list)
             assert isinstance(flow, list)
         except AssertionError:
-            raise ValueError("'x_coords must be the same length as 'y_coords' and 'z_coords'. The shape of 'flow' should be (len(x_coords), len(y_coords), len(z_coords))")
+            raise ValueError("'x_coords must be the same length as 'y_coords' and 'z_coords'. The shape of 'flow' should be (len(x_coords), len(y_coords), len(z_coords), 3)")
         else:
             self.set_x_coords(x_coords)
             self.set_y_coords(y_coords)
@@ -99,7 +99,7 @@ class Flow(object):
 
         return np.array(gradient)
 
-    def get_flow_at_point(self, pnt_coords, vrf_func = None):
+    def get_flow_at_point(self, pnt_coords, flow_calc_func = None):
         """
         Returns the flow at a point in the flow-field, given the point coordinates and the combined wake at that point.
         param pnt_Coords list of [x,y,z] coordinates
@@ -125,11 +125,11 @@ class Flow(object):
         
         # return np array representing the 3D flow at the point (or nearest point) required
         # given single or combined wakes
-        if vrf_func == None:
+        if flow_calc_func == None:
             # returns 3 element numpy array
             return undisturbed_flow_at_point 
         else:
-            disturbed_flow_at_point = vrf_func(undisturbed_flow_at_point, pnt_coords)
+            disturbed_flow_at_point = flow_calc_func(undisturbed_flow_at_point, pnt_coords)
             return disturbed_flow_at_point
 
 

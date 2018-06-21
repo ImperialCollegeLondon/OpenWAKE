@@ -29,4 +29,5 @@ class SumOfSquares(BaseWakeCombination):
         return sum_of_squares
 
     def calc_flow_at_point(self, undisturbed_flow_at_point, pnt_coords=None):
-        return (1 - self.combine()**0.5) * np.linalg.norm(undisturbed_flow_at_point,2)
+        #return (1 - self.combine()**0.5) * np.linalg.norm(undisturbed_flow_at_point,2)
+        return (1 - self.combine()**0.5) * undisturbed_flow_at_point

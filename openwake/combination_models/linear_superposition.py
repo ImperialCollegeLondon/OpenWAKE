@@ -32,4 +32,4 @@ class LinearSuperposition(BaseWakeCombination):
         return linear_sum
 
     def calc_flow_at_point(self, undisturbed_flow_at_point, pnt_coords=None):
-        return (1 - self.combine()) * np.linalg.norm(undisturbed_flow_at_point,2)
+        return (1 - self.combine()) * undisturbed_flow_at_point
