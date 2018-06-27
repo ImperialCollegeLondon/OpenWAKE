@@ -1,18 +1,20 @@
 """
 Implements the Geometric Sum wake combination model.
 """
-import numpy as np
+
 from combination_models.base_combination import BaseWakeCombination
+from flow_field_model.flow import FlowField
+from wake_models.wake_field_model import WakeField
+import numpy as np
 
 class GeometricSum(BaseWakeCombination):
     """
     Implements the Geometric Sum wake combination model.
     """
-    def __init__(self, u_ij = [], u_j = []):
-        super(GeometricSum, self).__init__(u_ij, u_j)
+    def __init__(self, flow_field, wake_field):
+        super(GeometricSum, self).__init__(flow_field, wake_field)
 
-
-    def combine(self):
+    def calc_combination_speed_at_point(self, pnt_coords, flow_field, u_j, u_ij, mag):
         """
         Combines a number of wakes to give a single flow speed at a turbine.
 
@@ -22,10 +24,15 @@ class GeometricSum(BaseWakeCombination):
      
         """
         
-        wake_freestream_velocity_ratio = self.calc_velocity_ratio()
+        wake_freestream_velocity_ratio = self.calc_velocity_ratio(u_j, u_ij)
 
-        return np.prod(wake_freestream_velocity_ratio, axis=0)
+        velocity_ratio_sum = np.prod(wake_freestream_velocity_ratio, axis=0)
 
-    def calc_flow_at_point(self, undisturbed_flow_at_point, pnt_coords=None):
-        #return self.combine() * np.linalg.norm(undisturbed_flow_at_point,2)
-        return self.combine() * undisturbed_flow_at_point
+        undisturbed_flow_at_point = flow_field.get_undisturbed_flow_at_point(pnt_coords, False)
+        undisturbed_flow_mag_at_point = np.linalg.norm(undisturbed_flow_at_point, 2)
+        undisturbed_flow_dir_at_point = undisturbed_flow_at_point / undisturbed_flow_mag_at_point
+
+        if mag == True:
+            return velocity_ratio_sum * undisturbed_flow_mag_at_point
+        else:
+            return undisturbed_flow_dir_at_point * velocity_ratio_sum * undisturbed_flow_mag_at_point

@@ -4,25 +4,12 @@ A base single turbine model from which others can be derived.
 
 import numpy as np
 from helpers import *
-
-class TurbineField(object):
-    def __init__(self, turbine_list = []):
-        self.turbines = []
-        self.add_turbines(turbine_list)
-
-    def add_turbines(self, turbine_list = []):
-        self.turbines = self.turbines + [t for t in turbine_list]
-
-    def get_turbines(self):
-        return np.array(self.turbines)
-
-    def get_num_turbines(self):
-        return self.get_turbines.size
+from turbine_models.turbine_field import TurbineField
 
 class BaseTurbine(object):
     """ Implements base turbine class."""
 
-    def __init__(self, radius=10, coords=[0,0,0], top_clearance=np.inf, direction=[-1,0,0], thrust_coefficient_curve=[[],[]], power_coefficient_curve=[[],[]]):
+    def __init__(self, radius=10, coords=[0,0,0], top_clearance=np.inf, direction=[-1,0,0], thrust_coefficient_curve=[[],[]], power_coefficient_curve=[[],[]], turbine_field = TurbineField()):
         """ 
         param radius is radius of turbine blades param hub_height is distance from floor to hub
         param coords is a list of x,y,z coordinates, where z is the distance from sea level in the
@@ -39,6 +26,7 @@ class BaseTurbine(object):
         self.set_direction(direction)
         self.set_thrust_coefficient_curve(thrust_coefficient_curve)
         self.set_power_coefficient_curve(power_coefficient_curve)
+        self.set_turbine_field(turbine_field)
         
     def get_radius(self):
         return self.radius
@@ -57,6 +45,9 @@ class BaseTurbine(object):
 
     def get_power_coefficient_curve(self):
         return self.power_coefficient_curve
+
+    def get_turbine_field(self):
+        return self.turbine_field
 
     def calc_thrust_coefficient(self, flow_mag_at_turbine):
 
@@ -162,14 +153,24 @@ class BaseTurbine(object):
         else:
             self.power_coefficient_curve = np.array(power_coefficient_curve)
 
-    def calc_power_op(self, flow_at_turbine):
+    def calc_power_op(self, flow_mag_at_turbine):
         #TODO avaerage over turbine rotor area
         k1, k2, rho = 1/2, 3, 1024
-        power_coefficient = self.calc_power_coefficient(flow_at_turbine)
+        power_coefficient = self.calc_power_coefficient(flow_mag_at_turbine)
         area = self.calc_area()
-        flow_mag_at_turbine = np.linalg.norm(flow_at_turbine,2) if isinstance(flow_at_turbine, (list, np.ndarray)) else flow_at_turbine
+        flow_mag_at_turbine = np.linalg.norm(flow_mag_at_turbine,2) if isinstance(flow_mag_at_turbine, (list, np.ndarray)) else flow_mag_at_turbine
         power_extracted = k1 * rho * flow_mag_at_turbine**k2 * area
         return power_extracted
+
+    def set_turbine_field(self, turbine_field = TurbineField()):
+        try:
+            assert isinstance(turbine_field, TurbineField)
+        except AssertionError:
+            raise TypeError("'turbine_field' must be of type 'TurbineField'")
+        else:
+            self.turbine_field = turbine_field
+            if self not in turbine_field.get_turbines():
+                self.turbine_field.add_turbines([self])
 
 ##    def calc_average_vrf(self, combined_vrf):
 ##        """

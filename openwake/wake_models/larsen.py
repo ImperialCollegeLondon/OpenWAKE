@@ -1,6 +1,7 @@
 from wake_models.base_wake import BaseWake
 from turbine_models.base_turbine import BaseTurbine
-from flow_field_model.flow import Flow
+from wake_models.wake_field_model import WakeField
+from flow_field_model.flow import FlowField
 import numpy as np
 from helpers import *
 
@@ -10,11 +11,11 @@ class Larsen(BaseWake):
     https://www.researchgate.net/profile/Jie_Zhang37/publication/265844008_Impact_of_Different_Wake_Models_On_the_Estimation_of_Wind_Farm_Power_Generation/links/561703e208ae40a7199a52ac/Impact-of-Different-Wake-Models-On-the-Estimation-of-Wind-Farm-Power-Generation.pdf
     """
 
-    def __init__(self, turbine = BaseTurbine(), flow= Flow(), wake_decay = 0.3, ambient_intensity = 0.1):
+    def __init__(self, turbine = BaseTurbine(), flow_field = FlowField(), wake_decay = 0.3, ambient_intensity = 0.1, wake_field = WakeField()):
         self.set_wake_decay(wake_decay)
-        super(Larsen, self).__init__(turbine, flow)
         self.set_ambient_intensity(ambient_intensity)
         self.set_wake_decay(wake_decay)
+        super(Larsen, self).__init__(turbine, flow_field, wake_field)
 
     def calc_r_nb(self, turbine_diameter, ambient_intensity):
         """
@@ -59,7 +60,8 @@ class Larsen(BaseWake):
         """
         Calculates the prandtl non-dimensional mixing length, c1
         """
-        effective_radius = self.calc_effective_diameter(thrust_coefficient, turbine_diameter)/2
+
+        effective_radius = self.calc_effective_diameter(thrust_coefficient, turbine_diameter) / 2
         x0 = self.calc_x0(thrust_coefficient, turbine_diameter, hub_height, ambient_intensity)
         
         k1, k2, k3, k4 = 5/2, 105/2, -1/2, -5/6
@@ -87,107 +89,60 @@ class Larsen(BaseWake):
             raise TypeError("'ambient_intensity' must be of type 'float'")
         else:
             self.ambient_intensity = ambient_intensity
-
-    def calc_distance_along_flow(self, pnt_coords):
-        """
-        Returns distance between turbine and point, parallel to the direction of
-        flow at turbine
-        """
-        rel_pnt_coords = self.relative_position(pnt_coords)
-        #hyp = np.linalg.norm(rel_pnt_coords,2) - TODO won't work because of z_coord
-        #opp = self.calc_dist_from_wake_centre(rel_pnt_coords)
-
-        # by Pythagoras' Thm
-        #adj = (hyp**2 - opp**2)**0.5
-
-        #return adj
-        # return x_coordinate of relative position of point to turbine
-        return rel_pnt_coords[0]
-
-    def calc_dist_from_wake_centre(self, pnt_coords):
-        """
-        Returns the distance of point from the centerline of the wake generated
-        by turbine
-        """
-        
-        rel_pnt_coords = self.relative_position(pnt_coords)
-        
-        # distance from point to line formula in 3d
-        # centerline can now be assumed to be colinear with target vector (1,0,0)
-        # point vector, first line vector, second line vector
-        #x0, x1, x2 = rel_pnt_coords, np.array([0,0,0]), np.array([1,0,0])
-        #dist = np.linalg.norm(np.cross((x0-x1),(x0-x2)),2)/np.linalg.norm(x2-x1,2)
-        return rel_pnt_coords[2]
     
-    def calc_wake_radius(self, pnt_coords):
+    def calc_wake_radius(self, pnt_coords, turbine_coords, flow_field, turbine_radius, thrust_coefficient):
         """
         Returns the wake radius at point given that point is in the wake of
         turbine
         """
 
-        turbine = self.get_turbine()
-        turbine_diameter = 2 * turbine.get_radius()
-        u_0 = self.get_flow_mag_at_turbine()
-        thrust_coefficient = turbine.calc_thrust_coefficient(u_0)
-        rotor_disc_area = turbine.calc_area()
-        hub_height = turbine.get_coords()[2]
+        rotor_disc_area = np.pi * turbine_radius**2
+        turbine_diameter = 2 * turbine_radius
+        hub_height = turbine_coords[2]
         ambient_intensity = self.get_ambient_intensity()
         
-        x = self.calc_distance_along_flow(pnt_coords)
-        prandtl_mixing = self.calc_prandtl_mixing(thrust_coefficient, turbine_diameter, rotor_disc_area, hub_height, ambient_intensity)
+        x_rel = relative_position(turbine_coords, pnt_coords, flow_field)[0]
+        prandtl_mixing = self.calc_prandtl_mixing(thrust_coefficient, turbine_radius, rotor_disc_area, hub_height, ambient_intensity)
         x0 = self.calc_x0(thrust_coefficient, turbine_diameter, hub_height, ambient_intensity)
 
         k1, k2, k3, k4, k5 = 35/2, 1/5, 3, 1/3, 2
         
-        return (k1 / np.pi)**k2 * (k3 * prandtl_mixing**k5)**k2 * (thrust_coefficient * rotor_disc_area * (x + x0))**k4
+        return (k1 / np.pi)**k2 * (k3 * prandtl_mixing**k5)**k2 * (thrust_coefficient * rotor_disc_area * (x_rel + x0))**k4
 
-    def calc_vrf_at_point(self, pnt_coords):
-        """
-        Returns the individual velocity reduction factor
-        """
-        # check if point is in wake caused by turbine
-        if self.is_in_wake(pnt_coords):
-            #x = self.calc_distance_along_flow(pnt_coords) 
-            #r = self.calc_dist_from_wake_centre(pnt_coords)
+    def calc_vrf_at_point(self, pnt_coords, turbine_coords, flow_field, turbine_radius, thrust_coefficient, u_0):
+        if self.is_in_wake(pnt_coords, turbine_coords, turbine_radius, thrust_coefficient, flow_field):
+            turbine_diameter = 2 * turbine_radius
+            wake_decay = self.get_wake_decay()
+            hub_height = turbine_coords[2]
+            x_rel, y_rel, z_rel = relative_position(turbine_coords, pnt_coords, flow_field)
             
-            rel_pnt_coords = self.relative_position(pnt_coords)
-            rel_x_coord, rel_r_coord = rel_pnt_coords[0], rel_pnt_coords[2]
-            
-            turbine = self.get_turbine()
-            hub_height = turbine.get_coords()[2]
             ambient_intensity = self.get_ambient_intensity()
-            turbine_diameter = 2 * turbine.get_radius()
-            u_0 = self.get_flow_mag_at_turbine()
-            thrust_coefficient = turbine.calc_thrust_coefficient(u_0)
-            rotor_disc_area = turbine.calc_area()
+            rotor_disc_area = np.pi * turbine_radius**2
             
             prandtl_mixing = self.calc_prandtl_mixing(thrust_coefficient, turbine_diameter, rotor_disc_area, hub_height, ambient_intensity)
             x0 = self.calc_x0(thrust_coefficient, turbine_diameter, hub_height, ambient_intensity)
 
             k1, k2, k3, k4, k5, k6, k7, k8, k9 = 1/3, 3/2, 3, -1/2, 3/10, -1/5, 17.5, 1/9, 2
             
-            bracket1 = thrust_coefficient * rotor_disc_area / (rel_x_coord+x0)**k9
-            bracket2 = k3 * prandtl_mixing**k9 * thrust_coefficient * rotor_disc_area * (rel_x_coord+x0)
+            bracket1 = thrust_coefficient * rotor_disc_area / (x_rel + x0)**k9
+            bracket2 = k3 * prandtl_mixing**k9 * thrust_coefficient * rotor_disc_area * (x_rel + x0)
             bracket3 = k7 / np.pi
             bracket4 = k3 * prandtl_mixing**k9
             with np.errstate(all="ignore"):
-                velocity_deficit = u_0 * k8 * (bracket1**k1) * ((abs(rel_r_coord)**k2 * bracket2**k4) - (bracket3**k5 * bracket4**k6))**k9
-    
-            velocity_reduction_factor = velocity_deficit/u_0# if np.isnan(velocity_deficit) == False and np.isinf(velocity_deficit) == False else 0
+                velocity_reduction_factor = k8 * (bracket1**k1) * ((abs(z_rel)**k2 * bracket2**k4) - (bracket3**k5 * bracket4**k6))**k9
+            #velocity_reduction_factor = velocity_deficit/u_0# if np.isnan(velocity_deficit) == False and np.isinf(velocity_deficit) == False else 0
             return velocity_reduction_factor
+
         else:
             return 0
 
-    def calc_search_radius(self, recovery_loss=2.5):
+    def calc_search_radius(self, turbine_coords, flow_field, turbine_radius, thrust_coefficient, recovery_loss=2.5):
         """
         Returns the search radius for an acceptable recovery loss
         """
-        turbine = self.get_turbine()
-        turbine_diameter = 2* turbine.get_radius()
-        u_0 = self.get_flow_mag_at_turbine()
-        thrust_coefficient = turbine.calc_thrust_coefficient(u_0)
-        rotor_disc_area = turbine.calc_area()
-        hub_height = turbine.get_coords()[2]
+        turbine_diameter = 2  * turbine_radius
+        rotor_disc_area = np.pi * turbine_radius**2
+        hub_height = turbine_coords[2]
         ambient_intensity = self.get_ambient_intensity()
         prandtl_mixing = self.calc_prandtl_mixing(thrust_coefficient, turbine_diameter, rotor_disc_area, hub_height, ambient_intensity)
         
@@ -198,8 +153,8 @@ class Larsen(BaseWake):
         else:
             recovery_loss /= k1
             alpha = thrust_coefficient * rotor_disc_area
-            beta0 = -(k2/np.pi)**k3
+            beta0 = -(k2 / np.pi)**k3
             beta1 = k6 * (prandtl_mixing**2)**k4
             beta = (beta0 * beta1)**2
-            return (alpha / ((k5 * (1-recovery_loss)) / beta)**k6)**0.5
+            return (alpha / ((k5 * (1 - recovery_loss)) / beta)**k6)**0.5
         
