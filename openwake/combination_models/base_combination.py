@@ -129,10 +129,10 @@ class BaseWakeCombination(BaseField):
             turbine_radius = turbine.get_radius()
             flow_mag_at_turbine = flow_field.get_undisturbed_flow_at_point(turbine_coords, True)
             thrust_coefficient = turbine.calc_thrust_coefficient(flow_mag_at_turbine)
-            self.set_u_ij(turbine_coords, flow_field, wake_field)
-            u_ij = self.get_u_ij()
             
             if fine_mesh == False:
+                self.set_u_ij(turbine_coords, flow_field, wake_field)
+                u_ij = self.get_u_ij()
                 x_index, y_index, z_index = relative_index(origin_coords, turbine_coords, flow_field)
                 disturbed_flow_grid[x_index, y_index, z_index] = self.calc_combination_speed_at_point(turbine_coords, flow_field, u_j, u_ij, False)
             else:
@@ -142,45 +142,41 @@ class BaseWakeCombination(BaseField):
                 for i in range(start_x_index, end_x_index + 1):
                     x = x_coords[i]
                     wake_radius = w.calc_wake_radius([x, turbine_coords[1], turbine_coords[2]], turbine_coords, flow_field, turbine_radius, thrust_coefficient)
-
+                    
                     # if the coordinate at the wake radius exceeds the y or z boundary, set end index to boundary
                     # if symmetrical (dash) indices at wake radius coordinate exceed the y or z boundary, set end index to boundary
-                    end_y_index = find_index(y_coords, turbine_coords[1] + wake_radius)
-                    end_z_index = find_index(z_coords, turbine_coords[2] + wake_radius)
+                    max_y_berth_index, max_z_berth_index = np.argmax([len_y - 1 - start_y_index, start_y_index]), np.argmax([len_z - 1 - start_z_index, start_z_index])
+                    y_increment, z_increment = (-1)**max_y_berth_index, (-1)**max_z_berth_index
+                    end_y_index, end_z_index = find_index(y_coords, turbine_coords[1] + (y_increment * wake_radius)),\
+                                               find_index(z_coords, turbine_coords[2] + (z_increment * wake_radius))
                         
-                    for j in range(start_y_index, end_y_index + 1):
-                        if j < len_y: 
-                            y = y_coords[j]
-                        else:
-                            y = y_coords[-1]
-                            end_y_reached = True
+                    for j in range(start_y_index, end_y_index + 1, y_increment):
+                        
+                        y = y_coords[j]
     
-                        j_dash = (2 * start_y_index) - j
-                        if j_dash >= 0:
+                        j_dash = (2 * start_y_index) - (y_increment * j)
+                        if j_dash >= 0 and j_dash < len_y:
                             y_dash = y_coords[j_dash]
                         else:
-                            y_dash = y_coords[0]
+                            y_dash = -1
                             end_y_dash_reached = True
                         
                         # if y has already been found not to be outside wake, break to next x value
-                        for k in range(start_z_index, end_z_index + 1):
+                        for k in range(start_z_index, end_z_index + 1, z_increment):
 
-                            if k < len_z: 
-                                z = z_coords[k]
-                            else:
-                                z = z_coords[-1]
-                                end_z_reached = True
+                            z = z_coords[k]
 
-                            k_dash = (2 * start_z_index) - k
-                            if k_dash >= 0:
+                            k_dash = (2 * start_z_index) - (z_increment * k)
+                            if k_dash >= 0 and k_dash < len_z:
                                 z_dash = z_coords[k_dash]
                             else:
-                                z_dash = z_coords[0]
+                                z_dash = -1
                                 end_z_dash_reached = True
                             
                             # if this coordinate is not in wake of turbine, skip coordinate and remainder of coordinates in current loop
                             pnt_coords = np.array([x, y, z])
-                            pnt_coords_dash = np.array([x, y_dash, z_dash])
+                            if not (end_y_dash_reached or end_z_dash_reached):
+                                pnt_coords_dash = np.array([x, y_dash, z_dash])
                             
                             # if pnt_coords has already had combination speed calculated, continue to next iteration 
                             if (x, y, z) not in checked_coords:
@@ -190,19 +186,19 @@ class BaseWakeCombination(BaseField):
                                 checked_coords.append((x,y,z))
                                 #print("1", disturbed_flow_grid[i,j,k], [i,j,k])
 
-                            if (x, y_dash, z_dash) not in checked_coords:
+                            if not (end_y_dash_reached or end_z_dash_reached) and (x, y_dash, z_dash) not in checked_coords:
                                 self.set_u_ij(pnt_coords_dash, flow_field, wake_field)
                                 u_ij = self.get_u_ij()
                                 disturbed_flow_grid[i, j_dash, k_dash] = self.calc_combination_speed_at_point(pnt_coords_dash, flow_field, u_j, u_ij, False)
                                 checked_coords.append((x, y_dash, z_dash))
                                 #print("2", disturbed_flow_grid[i,j_dash,k_dash], [i,j_dash,k_dash])
 
-                            if end_z_reached and end_z_dash_reached:
-                                end_z_reached, end_z_dash_reached = False, False
+                            if end_z_dash_reached:
+                                end_z_dash_reached = False
                                 break
                             
-                        if end_y_reached and end_y_dash_reached:
-                            end_y_reached, end_y_dash_reached = False, False
+                        if end_y_dash_reached:
+                            end_y_dash_reached = False
                             break
 
         self.set_disturbed_flow_grid(disturbed_flow_grid, fine_mesh)

@@ -16,6 +16,7 @@ class BaseWake(BaseField):
         self.set_turbine(turbine)
         self.wake_field.add_wakes([self])
         self.calc_multiplier_grid(flow_field)
+        self.is_grid_outdated = False
 
     def is_in_wake(self, pnt_coords, turbine_coords, turbine_radius, thrust_coefficient, flow_field):
 
@@ -30,7 +31,8 @@ class BaseWake(BaseField):
             return False
         else:
             wake_radius = self.calc_wake_radius(pnt_coords, turbine_coords, flow_field, turbine_radius, thrust_coefficient)
-            return wake_radius > (abs(y_rel)**2 + abs(z_rel)**2)**0.5
+            #return wake_radius > (abs(y_rel)**2 + abs(z_rel)**2)**0.5
+            return wake_radius > abs(y_rel) or wake_radius > abs(z_rel)
 
     def set_grid_outdated(self, grid_outdated):
         """
@@ -39,6 +41,11 @@ class BaseWake(BaseField):
         self.is_grid_outdated = grid_outdated
 
     def get_multiplier_grid(self):
+        try:
+            self.multiplier_grid
+        except AttributeError:
+            self.calc_multiplier_grid()
+            
         return self.multiplier_grid
 
     def set_multiplier_grid(self, multiplier_grid):
@@ -66,13 +73,13 @@ class BaseWake(BaseField):
             origin_coords = np.array([0,0,0])
             rel_origin_indices = relative_index(origin_coords, pnt_coords, flow_field)
             rel_turbine_position = relative_position(turbine_coords, pnt_coords, flow_field)
-            dx = flow_field.get_dx()
-            r_coords = self.get_r_coords()
-            dr = self.get_dr()
-            x_index, r_index = abs(int((pnt_coords[0] - turbine_coords[0]) / dx)), abs(int(np.linalg.norm(pnt_coords[0:] - turbine_coords[0:], 2) / dr))
-            
+            r_coords = self.calc_r()[0]
+            dx, dr = flow_field.get_dx(), abs(r_coords[1] - r_coords[0])
+            x_index, r_index = abs(int((pnt_coords[0] - turbine_coords[0]) / dx)), abs(int(np.linalg.norm(pnt_coords[1:] - turbine_coords[1:], 2) / dr))
+            if any(pnt_coords[1:] - turbine_coords[1:] < 0):
+                r_index += 1
             if self.is_in_wake(pnt_coords, turbine_coords, turbine_radius, thrust_coefficient, flow_field):
-                #TODO x_index out of multiplier_grid bounds
+                #print(pnt_coords, x_index, r_index, multiplier_grid[x_index, r_index])
                 disturbed_flow_at_point = flow_field.get_undisturbed_flow_at_point(pnt_coords, False) * multiplier_grid[x_index, r_index]
             else:
                 disturbed_flow_at_point = np.array(undisturbed_flow_grid[rel_origin_indices[0], rel_origin_indices[1], rel_origin_indices[2]])
@@ -86,17 +93,48 @@ class BaseWake(BaseField):
 
         return disturbed_flow_at_point
 
-    def set_r_coords(self, r_coords):
+    def calc_indices(self):
+        flow_field = self.get_flow_field()
+        turbine_coords = self.get_turbine().get_coords()
+        
+        x_coords, y_coords, z_coords = flow_field.get_x_coords(), flow_field.get_y_coords(), flow_field.get_z_coords()
+
+        start_x_index = find_index(x_coords, turbine_coords[0])
+        len_x = x_coords.size
+        end_x_index = len_x - 1
+        
+        start_y_index = find_index(y_coords, turbine_coords[1])
+        len_y = y_coords.size
+        end_y_index = len_y - 1
+
+        start_z_index = find_index(z_coords, turbine_coords[2])
+        len_z = z_coords.size
+        end_z_index = len_z - 1
+        return [start_x_index, end_x_index, start_y_index, end_y_index, start_z_index, end_z_index]
+
+
+    def calc_r(self):
+        flow_field = self.get_flow_field()
+        turbine_coords = self.get_turbine().get_coords()
+        y_coords, z_coords = flow_field.get_y_coords(), flow_field.get_z_coords()
+
+        start_x_index, end_x_index, start_y_index, end_y_index, start_z_index, end_z_index = self.calc_indices()
+
+        max_domain_berth_index = np.argmax([end_y_index - start_y_index, start_y_index, end_z_index - start_z_index, start_z_index])
+
+        # r_increment == 1 if upper y or z limit is widest berth, == -1 if lower y or z limit is widest berth
+        r_increment = (-1)**max_domain_berth_index
+        r_coord_index = (int(max_domain_berth_index / 2) % 2) + 1
+        start_r_index = [start_y_index, start_z_index][r_coord_index - 1]
+        r_coords = [y_coords, z_coords][r_coord_index - 1]
+        len_r = len(r_coords)
         self.r_coords = r_coords
-
-    def get_r_coords(self):
-        return self.r_coords
-
-    def set_dr(self, dr):
-        self.dr = dr
-
-    def get_dr(self):
-        return self.dr
+        self.r_coord_index = r_coord_index
+        self.start_r_index = start_r_index
+        self.r_increment = r_increment
+        self.len_r = len_r
+        return [self.r_coords, self.r_coord_index, self.start_r_index, self.r_increment, self.len_r]
+        
     
     def calc_multiplier_grid(self, flow_field):
         """
@@ -116,56 +154,40 @@ class BaseWake(BaseField):
         thrust_coefficient = turbine.calc_thrust_coefficient(u_0)
 
         # the dimensions of disturbed_flow_grid should allow for the maximum berth between the turbine and the domain boundaries
-        start_x_index = find_index(x_coords, turbine_coords[0])
-        len_x = x_coords.size
-        end_x_index = len_x - 1
-
-        start_y_index = find_index(y_coords, turbine_coords[1])
-        len_y = y_coords.size
-        end_y_index = len_y - 1
-
-        start_z_index = find_index(z_coords, turbine_coords[2])
-        len_z = z_coords.size
-        end_z_index = len_z - 1
-
-        max_domain_berth_index = np.argmax([end_y_index - start_y_index, start_y_index, end_z_index - start_z_index, start_z_index])
-
-        #end_r_index = [end_y_index, 0, end_z_index, 0][max_domain_berth_index]
-        
-        # r_increment == 1 if upper y or z limit is widest berth, == -1 if lower y or z limit is widest berth
-        r_increment = (-1)**max_domain_berth_index
-        reference_coord_index = int(max_domain_berth_index / 2) % 2
-        start_r_index = [start_y_index, start_z_index][reference_coord_index]
-        r_coords = [y_coords, z_coords][reference_coord_index]
-        len_r = len(r_coords)
-
-        self.set_r_coords(r_coords)
-        self.set_dr(abs(r_coords[1] - r_coords[0]))
+   
+        r_coords, r_coord_index, start_r_index, r_increment, len_r = self.calc_r()
+        start_x_index, end_x_index, start_y_index, end_y_index, start_z_index, end_z_index = self.calc_indices()
+        len_x = end_x_index + 1
         
         # TODO mulitplier should have 2 or 3 elements: u,v,w
         # this is a 2D grid of the multiplier along the longest radial line for each value of x relative to flow direction at turbine
         multiplier_grid = np.ones((len_x - start_x_index, len_r))
         
         for i in range(start_x_index, end_x_index + 1):
-            wake_radius = self.calc_wake_radius([x_coords[i], turbine_coords[1], turbine_coords[2]], turbine_coords, flow_field, turbine_radius, thrust_coefficient)
+            x = x_coords[i]
+            wake_radius = self.calc_wake_radius([x, turbine_coords[1], turbine_coords[2]], turbine_coords, flow_field, turbine_radius, thrust_coefficient)
 
             # get turbine coordinate corresponding to reference radial line r, and add or subtract wake_radius from it depending on
             # wheter that reference line extends further above or below turbine in domain
-            end_r_index = find_index(r_coords, turbine_coords[reference_coord_index + 1] + (r_increment * wake_radius))
+            end_r_index = find_index(r_coords, turbine_coords[r_coord_index] + (r_increment * wake_radius))
             
             for j in range(start_r_index, end_r_index + 1, r_increment):
                 # calculate the multiplier along the longest (positive or negative) radial y or z line (r) at this value of x along wake
                 # then apply that multiplier to the reflected r coordinate and the corresonding non-r coordinate and its reflected coordinate
                 
-                pnt_coords = np.array([x_coords[i], y_coords[j], z_coords[start_z_index]]) if reference_coord_index == 0 else np.array([x_coords[i], y_coords[start_y_index], z_coords[j]])
+                pnt_coords = np.array([x_coords[i], y_coords[j], z_coords[start_z_index]]) if r_coord_index == 0 else np.array([x_coords[i], y_coords[start_y_index], z_coords[j]])
 
                 if self.is_in_wake(pnt_coords, turbine_coords, turbine_radius, thrust_coefficient, flow_field):
-                    # TODO multiplier diminishes too quickly with rel_x
+                    # TODO multiplier == 1 along centreline
                     multiplier = 1 - self.calc_vrf_at_point(pnt_coords, turbine_coords, flow_field, turbine_radius, thrust_coefficient, u_0)
                     multiplier_grid[i - start_x_index, j - start_r_index] = multiplier
+                    print(i - start_x_index, j - start_r_index, multiplier)
+
+##        for i in range(multiplier_grid.shape[0]):
+##            for j in range(multiplier_grid.shape[1]):
+##                print(i, j, multiplier_grid[i,j])
                     
         self.set_multiplier_grid(multiplier_grid)
-        print(multiplier_grid)
 
     def get_turbine(self):
         return self.turbine
