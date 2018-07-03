@@ -18,14 +18,14 @@ def minimise_disturbed_flow_deficit():
 
     pass
 
-def maximise_power_output(flow_field, wake_field, var_list='xy'):
+def maximise_power_output(flow_field, wake_field, turbine_field, var_list='xy'):
 
     # define variables
     wakes = wake_field.get_wakes()
     flow = flow_field.get_flow()
-    x_coords, y_coords, z_coords = flow.get_x_coords(), flow.get_y_coords(), flow.get_z_coords()
+    x_coords, y_coords, z_coords = flow_field.get_x_coords(), flow_field.get_y_coords(), fflow_fieldlow.get_z_coords()
     len_x = x_coords.size
-    num_turbines = wake_field.get_num_wakes()
+    num_turbines = turbine_field.get_num_turbines()
     min_x, max_x, min_y, max_y, min_z, max_z = x_coords.min(), x_coords.max(). y_coords.min(), y_coords.max(), z_coords.min(), z_coords.max()
     turbine_coords_arr = np.zeros((3, len_x))
     turbine_radius_arr = np.zeros(np.math.factorial(num_variables))
@@ -33,9 +33,8 @@ def maximise_power_output(flow_field, wake_field, var_list='xy'):
     lower_bounds_arr = np.zeros((3, len_x))
     upper_bounds_arr = np.zeros((3, len_x))
 
-    for w in wakes:
-        turbine = w.get_turbine()
-        turbine_coords = turbine.get_coords()
+    for t in turbines:
+        turbine_coords = t.get_coords()
         if 'x' in var_list:
             np.append(turbine_coords_arr[0], turbine_coords[0])
             np.append(lower_bounds_arr[0], min_x)
@@ -49,12 +48,8 @@ def maximise_power_output(flow_field, wake_field, var_list='xy'):
             np.append(lower_bounds_arr[2], min_z)
             np.append(upper_bounds_arr[2], max_z)
 
-    variables = turbine_coords_arr.flatten().tolist()
+    initial_variables = turbine_coords_arr.flatten().tolist()
     num_variables = variables.size
-    
-    # define function
-
-    # define linear equality constraints
 
     # define bound constraints. all x, y and z turbine coordinates must be within the domain
     lower_bounds = lower_bounds_arr.flatten().tolist()
@@ -62,49 +57,73 @@ def maximise_power_output(flow_field, wake_field, var_list='xy'):
 
     linear_bounds = Bounds(lower_bounds, upper_bounds)
 
-    # define linear constraints
-    
-    #linear_constraint = LinearConstraint(coefficients, lower, upper)
-
     # define nonlinear constraints. all turbine coordinates must be at least the sum of its radius and each other turbines radius away from each other turbine
     # ri + rj <= ((xi - xj)**2 + (yi - yj)**2 + (zi - zj)**2)**0.5 for all i and j
-    def non_linear_constraint_func(variables):
-        non_linear_constraints_arr = np.zeros((np.math.factorial(num_variables)))
-##        for w in wakes:
-##            for v in wakes:
-##                if w != v:
+    def non_linear_constraint_func(x):
+        cons_f_arr = np.zeros((np.math.factorial(num_variables)))
 
-        for v in range(variables[0:num_turbines]):
-            xi, yi, zi = variables[v], variables[v + num_turbines], variables[v + (2 * num_turbines)]
-            for w in range(variables[v:num_turbines]):
-                xi, yi, zi = variables[v], variables[v + num_turbines], variables[v + (2 * num_turbines)]
-                xj, yj, zj = variables[w], variables[w + num_turbines], variables[w + (2 * num_turbines)]
-##                    xi, yi, zi = turbine_i.get_coords()
-##                    xj, yj, zj = turbine_j.get_coords()
+        for v in range(0:num_turbines):
+            xi, yi, zi = x[v], x[v + num_turbines], x[v + (2 * num_turbines)]
+            for w in range(x[v:num_turbines]):
+                xi, yi, zi = x[v], x[v + num_turbines], x[v + (2 * num_turbines)]
+                xj, yj, zj = x[w], x[w + num_turbines], x[w + (2 * num_turbines)]
                 
                 turbine_i_radius = wakes[v].get_turbine().get_radius()
                 turbine_j_radius = wakes[w].get_turbine().get_radius()
                 turbine_radius_arr[v + w] = turbine_i_radius + turbine_j_radius
                     
-                non_linear_constraints_arr[v + w] = ((xi - xj)**2 + (yi - yj)**2 + (zi - zj)**2)**0.5)
+                cons_f_arr[v + w] = ((xi - xj)**2 + (yi - yj)**2 + (zi - zj)**2)**0.5)
 
-        return non_linear_constraints_arr.tolist()
+        return cons_f_arr.tolist()
                     
-    def non_linear_constraint_jacobian(variables):
-        non_linear_constraints_jacobian_arr = np.zeros((np.math.factorial(num_variables), num_variables))
-        for v in range(variables[0:num_turbines]):
-            for w in range(variables[v:num_turbines]):
-                xi, yi, zi = variables[v], variables[v + num_turbines], variables[v + (2 * num_turbines)]
-                xj, yj, zj = variables[w], variables[w + num_turbines], variables[w + (2 * num_turbines)]
-                non_linear_constraints_jacobian_arr[v + w, v] = 2 * (xi - xj) * xi
-                non_linear_constraints_jacobian_arr[v + w, w] = -2 * (xi - xj) * xj
-                non_linear_constraints_jacobian_arr[v + w, v + num_turbines] = 2 * (yi - yj) * yi
-                non_linear_constraints_jacobian_arr[v + w, w + num_turbines] = -2 * (yi - yj) * yj
-                non_linear_constraints_jacobian_arr[v + w, v + (2 * num_turbines)] = 2 * (zi - zj) * zi
-                non_linear_constraints_jacobian_arr[v + w, w + (2 * num_turbines)] = -2 * (zi - zj) * zj
-        return non_linear_constraints_arr.tolist()
- 
-    non_linear_constraint = NonlinearConstraint(non_linear_constraint_func, )
+    def cons_j(x):
+        cons_j_arr = np.zeros((np.math.factorial(num_variables), num_variables))
+        for v in range(0:num_turbines-1):
+            for w in range(v+1:num_turbines):
+                xi, yi, zi = x[v], x[v + num_turbines], x[v + (2 * num_turbines)]
+                xj, yj, zj = x[w], x[w + num_turbines], x[w + (2 * num_turbines)]
+                cons_j_arr[v + w - 1, v] = 2 * (xi - xj)
+                cons_j_arr[v + w - 1, w] = -2 * (xi - xj)
+                cons_j_arr[v + w - 1, v + num_turbines] = 2 * (yi - yj)
+                cons_j_arr[v + w - 1, w + num_turbines] = -2 * (yi - yj)
+                cons_j_arr[v + w - 1, v + (2 * num_turbines)] = 2 * (zi - zj)
+                cons_j_arr[v + w - 1, w + (2 * num_turbines)] = -2 * (zi - zj)
+        return cons_j_arr.tolist()
 
-    # define non-linear bound constraints
-    pass
+    def cons_h(x, v):
+        """
+        linear combination of hessians
+        """
+        cons_h_arr = np.zeros((np.math.factorial(num_variables), num_variables))
+        cons_h_arr[i, i], cons_h_arr[i, j] = 2, -2, 0
+        for v in range(0:num_turbines-1):
+            for w in range(v+1:num_turbines):
+                xi, yi, zi = x[v], x[v + num_turbines], x[v + (2 * num_turbines)]
+                xj, yj, zj = x[w], x[w + num_turbines], x[w + (2 * num_turbines)]
+                cons_h_arr[v + w - 1, v] = 2
+                cons_h_arr[v + w - 1, w] = -2
+                cons_h_arr[v + w - 1, v + num_turbines] = 2
+                cons_h_arr[v + w - 1, w + num_turbines] = -2
+                cons_h_arr[v + w - 1, v + (2 * num_turbines)] = 2
+                cons_h_arr[v + w - 1, w + (2 * num_turbines)] = -2
+        return np.sum(v * cons_h_arr).tolist()
+ 
+    non_linear_constraint = NonlinearConstraint(non_linear_constraint_func, turbine_radius_arr, np.inf, \
+                                                jac = cons_j, hess = cons_h)
+
+    # define objective function, jacobian, hessian
+    def obj_j(x):
+        obj_j_arr = np.zeros(())
+        for t in range(num_turbines):
+            #turbines[t].set_coords([x[t], x[t + num_turbines], x[t + (2 * num_turbines)]])
+        wake_combination.calc_disturbed_flow_grid(False)
+        flow_mag_at_turbine = wake_combination.get_disturbed_flow_at_point(turbine_coords, True, False)
+        output_power = np.sum(t.calc_power_output(flow_mag_at_turbine))
+
+    def obj_h(x):
+        
+    def obj_func()
+
+    # find solution                                               
+    result = minimize(obj_func, initial_variables, method='trust-constr', jac=non_linear_constraint_jacobian, hess='2-point',\
+                      constraints=[non_linear_constraint], options={'verbose':1}, bounds=linear_bounds)

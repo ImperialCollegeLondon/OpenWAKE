@@ -33,6 +33,6 @@ class EnergyBalance(BaseWakeCombination):
         undisturbed_flow_dir_at_point = undisturbed_flow_at_point / undisturbed_flow_mag_at_point
 
         if mag == True:
-            return (undisturbed_flow_mag_at_point**2 - energy_balance_sum)**0.5
+            return (undisturbed_flow_mag_at_point**2 - np.linalg.norm(energy_balance_sum, 2, 1))**0.5
         else:
-            return undisturbed_flow_dir_at_point * (undisturbed_flow_mag_at_point**2 - energy_balance_sum)*0.5
+            return np.array(undisturbed_flow_dir_at_point * (undisturbed_flow_mag_at_point**2 - energy_balance_sum)*0.5)

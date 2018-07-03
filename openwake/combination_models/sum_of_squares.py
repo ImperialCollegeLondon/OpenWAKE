@@ -34,6 +34,6 @@ class SumOfSquares(BaseWakeCombination):
         sum_of_squares = np.sum((1 - wake_freestream_velocity_ratio)**2, axis = 0)
 
         if mag == True:
-            return (1 - sum_of_squares**0.5) * undisturbed_flow_mag_at_point
+            return np.linalg.norm(1 - sum_of_squares**0.5, 2, 1) * undisturbed_flow_mag_at_point
         else:
-            return undisturbed_flow_dir_at_point * (1 - sum_of_squares**0.5) * undisturbed_flow_mag_at_point
+            return np.array(undisturbed_flow_dir_at_point * (1 - sum_of_squares**0.5) * undisturbed_flow_mag_at_point)

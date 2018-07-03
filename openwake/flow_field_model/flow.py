@@ -53,7 +53,7 @@ class FlowField(object):
         except AssertionError:
             raise TypeError("'x_coords' must be of type 'list', where each element is of type 'int' or 'float'")
         else:
-            self.x_coords =  np.array(x_coords)
+            self.x_coords =  np.array(x_coords, dtype=np.float64)
 
     def set_y_coords(self, y_coords = []):
         try:
@@ -62,7 +62,7 @@ class FlowField(object):
         except AssertionError:
             raise TypeError("'y_coords' must be of type 'list', where each element is of type 'int' or 'float'")
         else:
-            self.y_coords =  np.array(y_coords)
+            self.y_coords =  np.array(y_coords, dtype=np.float64)
 
     def set_z_coords(self, z_coords = []):
         default_z_coords = []
@@ -72,11 +72,11 @@ class FlowField(object):
         except AssertionError:
             raise TypeError("'z_coords' must be of type 'list', where each element is of type 'int' or 'float'")
         else:
-            self.z_coords =  np.array(z_coords)
+            self.z_coords =  np.array(z_coords, dtype=np.float64)
 
     def set_flow(self, flow = [0,0,0]):
         #flow_mg = np.meshgrid(flow)
-        flow_arr = np.array(flow)
+        flow_arr = np.array(flow, dtype=np.float64)
         flow_arr_flatten = flow_arr.flatten()
 
         try:
@@ -118,22 +118,10 @@ class FlowField(object):
                                                       find_index(z_coords, z_coord)
 
         # calculate undisturbed flow at point
-        undisturbed_flow_at_point = flow[x_coord_index, y_coord_index, z_coord_index]
+        undisturbed_flow_at_point = np.array(flow[x_coord_index, y_coord_index, z_coord_index], dtype=np.float64)
         if mag == True:
             undisturbed_flow_at_point = np.linalg.norm(undisturbed_flow_at_point, 2) if isinstance(undisturbed_flow_at_point, (list, np.ndarray)) else undisturbed_flow_at_point
         return undisturbed_flow_at_point
-        
-##        # return np array representing the 3D flow or magnitude at the point (or nearest point) required
-##        # given single or combined wakes
-##        if flow_calc_func == None:
-##            if mag == True:
-##                undisturbed_flow_at_point = np.linalg.norm(undisturbed_flow_at_point, 2)
-##            return undisturbed_flow_at_point 
-##        else:
-##            disturbed_flow_at_point = flow_calc_func(undisturbed_flow_at_point, pnt_coords)
-##            if mag == True:
-##                disturbed_flow_at_point = np.linalg.norm(disturbed_flow_at_point, 2)
-##            return disturbed_flow_at_point
 
 
 ##     def compute_flow_field(self, ambient_flow_field, turbine_locations,

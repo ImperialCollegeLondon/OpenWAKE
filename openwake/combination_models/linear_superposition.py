@@ -31,11 +31,13 @@ class LinearSuperposition(BaseWakeCombination):
         # and sum linearly
         linear_sum = np.sum((1 - wake_freestream_velocity_ratio), axis = 0)
 
+        #TODO linear_sum sometimes greater than one, wake_freestream_velocity_ratio negative?
+
         undisturbed_flow_at_point = flow_field.get_undisturbed_flow_at_point(pnt_coords, False)
         undisturbed_flow_mag_at_point = np.linalg.norm(undisturbed_flow_at_point, 2)
         undisturbed_flow_dir_at_point = undisturbed_flow_at_point / undisturbed_flow_mag_at_point
 
         if mag == True:
-            return (1 - linear_sum) * undisturbed_flow_mag_at_point
+            return np.linalg.norm((1 - linear_sum), 2, 1) * undisturbed_flow_mag_at_point
         else:
-            return undisturbed_flow_dir_at_point * (1 - linear_sum) * undisturbed_flow_mag_at_point
+            return np.array(undisturbed_flow_dir_at_point * (1 - linear_sum) * undisturbed_flow_mag_at_point)

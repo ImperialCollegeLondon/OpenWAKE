@@ -1,10 +1,9 @@
 import numpy as np
 
-NoneType = type(None)
-
 def relative_index(origin_pnt_coords, pnt_coords, flow_field):
     x_coords, y_coords, z_coords = flow_field.get_x_coords(), flow_field.get_y_coords(), flow_field.get_z_coords()
-    rel_pnt_coords = relative_position(origin_pnt_coords, pnt_coords, flow_field)
+    rel_pnt_coords = np.array(pnt_coords - origin_pnt_coords)
+    # TODO ensure on input that there is common dx, dy, dz
     dx, dy, dz = abs(x_coords[1] - x_coords[0]), abs(y_coords[1] - y_coords[0]), abs(z_coords[1] - z_coords[0])
     rel_x_inx, rel_y_inx, rel_z_inx = int(rel_pnt_coords[0]/dx), int(rel_pnt_coords[1]/dy), int(rel_pnt_coords[2]/dz)
     return np.array([rel_x_inx, rel_y_inx, rel_z_inx])
@@ -22,7 +21,7 @@ def rotation_matrix(axis, theta):
         if np.linalg.norm(axis, 2) == 0:
             return np.matrix(np.diag([1,1,1]))
         else:
-            axis = axis/np.linalg.norm(axis, 2)
+            axis = axis / np.linalg.norm(axis, 2)
             a = np.cos(theta/2.0)
             b, c, d = -axis*np.sin(theta/2.0)
             aa, bb, cc, dd = a*a, b*b, c*c, d*d
@@ -39,10 +38,12 @@ def relative_position(origin_pnt_coords, pnt_coords, flow_field):
     the x-axis and turbine is at the origin we wish to get x- and
     y-component of pnt_coords.
     """
+
+    #TODO fix, rotate turbine direction to face flow, then assume that centreline
+    # is colinear with flow
+    
     # We aim to rotate the vector from turbine to pnt_coords such that the flow
     # vector at turbine is parallel to the x-axis (the 'target' vector).
-    #turbine = self.get_turbine()
-    #turbine_coords = turbine.get_coords()
     #turbine_dir = turbine.get_direction()
     target = np.array([1.0, 0.0, 0.0]) # TODO should this instead be turbine_direction?
     flow_at_origin_pnt = flow_field.get_undisturbed_flow_at_point(origin_pnt_coords, False)
@@ -51,6 +52,7 @@ def relative_position(origin_pnt_coords, pnt_coords, flow_field):
     normalised_flow_at_origin_pnt = (flow_at_origin_pnt/np.linalg.norm(flow_at_origin_pnt, 2))
     #normalised_turbine_dir = (turbine_dir/np.linalg.norm(turbine_dir, 2))
 
+    # TODO is this necessary if we assume that turbine turns to face flow???
     axis_coords = np.cross(target, normalised_flow_at_origin_pnt)
     #axis_dir = np.cross(target, normalised_turbine_dir)
 
@@ -61,7 +63,8 @@ def relative_position(origin_pnt_coords, pnt_coords, flow_field):
     #rotation_matrix_dir = rotation_matrix(axis_dir, theta_dir)
             
     #return np.array((pnt_coords-turbine_coords)*rotation_matrix_coords*rotation_matrix_dir).flatten()
-    return np.array((pnt_coords-origin_pnt_coords)*rotation_matrix_coords).flatten() 
+    return np.array((pnt_coords - origin_pnt_coords) * rotation_matrix_coords).flatten()
+    #return np.array(pnt_coords - origin_pnt_coords)
 
 def find_nearest(array, value):
     """

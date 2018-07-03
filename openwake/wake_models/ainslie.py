@@ -107,7 +107,7 @@ class Ainslie(BaseWake):
 
         return self.disturbed_flow_grid
 
-    def calc_disturbed_flow_grid(self):
+    def calc_disturbed_flow_grid(self, flow_field):
         """
         The ainslie model is symetrical along the turbine axis - so we shall
         compute one side and reflect it along the turbine axis to find the complete
@@ -116,7 +116,7 @@ class Ainslie(BaseWake):
         """
 
         ## TODO should this be normed to remain consistent with other models
-        undisturbed_flow_grid = self.get_flow_field().get_flow()
+        undisturbed_flow_grid = flow_field.get_flow()
         # u, v and w represent the i, j and k components of the speeds at each point, respectively
         # x_grid, y_grid, z_grid are meshgrids corresponding to the x, y and z components at each coordinate
         x_grid, y_grid, z_grid, u, v, w = self.generate_disturbed_flow_grid()
@@ -149,7 +149,8 @@ class Ainslie(BaseWake):
 
         dx, dy, dz = abs(x_coords[0]-x_coords[1]), abs(y_coords[0] - y_coords[1]), abs(z_coords[0] - z_coords[1]),
 
-        u = np.zeros((len_x - start_x_index_turbine, len_y - start_y_index, len_z - start_z_index))
+        #u = np.zeros((len_x - start_x_index_turbine, len_y - start_y_index, len_z - start_z_index))
+        disturbed_flow_grid = np.array(undisturbed_flow_grid, dtype=np.float32)[start_x_index_turbine:len_x, start_y_index:len_y, start_z_index:len_z]
 
         # Dimensionless constant
         K1 = 0.015
@@ -176,7 +177,7 @@ class Ainslie(BaseWake):
         for k in range(start_z_index, len_z):
             # Assuming to the Gaussian profile, the velocity deficit a distance ‘r’ from the wake centerline
             D_mr = self.calc_off_centre_vdf(z_coords[k], b, D_m, turbine_diameter, turbine_coords, flow_field)
-            u[start_x_index - start_x_index_turbine, 0, k - start_z_index] = u_0 * (1 - D_mr)
+            disturbed_flow_grid[start_x_index - start_x_index_turbine, 0, k - start_z_index, 0] = u_0 * (1 - D_mr)
             
         # Initialise some iteration counters
         warm_up = 10
@@ -195,7 +196,7 @@ class Ainslie(BaseWake):
             ee = self.calc_eddy_viscosity(F, K1, b, D_m, K, ambient_intensity, u_0)
 
             # Initialise first element of vectors a, b, c and r
-            d_uz = u[I - start_x_index_turbine, 0, 1] - u[I - start_x_index, 0, 0]
+            d_uz = disturbed_flow_grid[I - start_x_index_turbine, 0, 1, 0] - disturbed_flow_grid[I - start_x_index, 0, 0, 0]
             a_vec = []
             b_vec = []
             c_vec = []
@@ -208,7 +209,7 @@ class Ainslie(BaseWake):
             # Compute remainder of vectors a, b, c
             for k in range(start_z_index + 1, len_z):
                 z = z_grid[I, start_y_index, k]#TODO J sometimes out of r_grids range here, maybe when cut-off due to large radius?
-                u_z = u[I - start_x_index_turbine, 0, k - start_z_index]
+                u_z = disturbed_flow_grid[I - start_x_index_turbine, 0, k - start_z_index, 0]
                 v_z = v[I - start_x_index_turbine, 0, k - start_z_index]
                 bracket1 = v_z * z * dz
                 bracket2 = 2 * ee * z
@@ -221,10 +222,10 @@ class Ainslie(BaseWake):
             # Compute z
             for k in range(start_z_index + 1, len_z-1):
                 z = z_grid[I, start_y_index, k]
-                u_z = u[I - start_x_index_turbine, 0, k - start_z_index]
-                v_z = v[I - start_x_index_turbine, 0, k - start_z_index]
-                d_uz = u[I - start_x_index_turbine, 0, k + 1 - start_z_index] - u[I - start_x_index_turbine, 0, k - 1 - start_z_index]
-                dd_uz = u[I - start_x_index_turbine, 0, k + 1 - start_z_index] - (2 * u[I - start_x_index_turbine, 0, k - start_z_index]) + u[I - start_x_index, 0, k - 1 - start_z_index]
+                u_z = disturbed_flow_grid[I - start_x_index_turbine, 0, k - start_z_index, 0]
+                v_z = disturbed_flow_grid[I - start_x_index_turbine, 0, k - start_z_index, 1]
+                d_uz = disturbed_flow_grid[I - start_x_index_turbine, 0, k + 1 - start_z_index, 0] - disturbed_flow_grid[I - start_x_index_turbine, 0, k - 1 - start_z_index, 0]
+                dd_uz = disturbed_flow_grid[I - start_x_index_turbine, 0, k + 1 - start_z_index, 0] - (2 * disturbed_flow_grid[I - start_x_index_turbine, 0, k - start_z_index, 0]) + disturbed_flow_grid[I - start_x_index, 0, k - 1 - start_z_index, 0]
                 d_product = dz * dx * d_uz
                 z = (ee * d_product) \
                     + (2 * z * ee * dx * dd_uz) \
@@ -234,14 +235,14 @@ class Ainslie(BaseWake):
 
             # Final value of z is computed differently
             z = z_grid[I, start_y_index, -1]
-            u_z = u[I - start_x_index_turbine, 0, -1]
+            u_z = disturbed_flow_grid[I - start_x_index_turbine, 0, -1, 0]
             v_z = v[I - start_x_index_turbine, 0, -1]
-            d_uz = u[I - start_x_index_turbine, 0, -1] - u[I - start_x_index, 0, -2]
-            dd_uz = u_0 - (2 * u[I - start_x_index_turbine, 0, -1]) + u[I - start_x_index, 0, -2]
+            d_uz = disturbed_flow_grid[I - start_x_index_turbine, 0, -1, 0] - disturbed_flow_grid[I - start_x_index, 0, -2, 0]
+            dd_uz = u_0 - (2 * disturbed_flow_grid[I - start_x_index_turbine, 0, -1, 0]) + disturbed_flow_grid[I - start_x_index, 0, -2, 0]
             d_product = dz * dx * d_uz
             z = (ee * d_product)\
                 + (2 * z * dx * ee * dd_uz) \
-                - (z * v_z * dz * dx * (u_0 - u[I - start_x_index, 0, -2]) \
+                - (z * v_z * dz * dx * (u_0 - disturbed_flow_grid[I - start_x_index, 0, -2, 0]) \
                 + (4 * z * (dz * u_z)**2)) \
                 - (c_vec[-1] * u_z)
             z_vec.append(z)
@@ -250,29 +251,28 @@ class Ainslie(BaseWake):
             A_mat = np.diag(a_vec[1:], -1) + np.diag(b_vec[:], 0) + np.diag(c_vec[:-1], 1)
 
             # Solve the system TODO fix this
-            u[I + 1 - start_x_index_turbine, 0, 0:] = np.linalg.solve(A_mat, np.array(z_vec).conj().transpose())
-            
+            disturbed_flow_grid[I + 1 - start_x_index_turbine, 0, 0:, 0] = np.linalg.solve(A_mat, np.array(z_vec).conj().transpose())
 
             # Update v on centreline
-            v[I - start_x_index, 0, 0] = 0
+            disturbed_flow_grid[I - start_x_index, 0, 0, 1] = 0
             for k in range(start_z_index + 1, len_z):
                 z = z_grid[I, start_y_index, k]
-                d_ux = u[I + 1 - start_x_index_turbine, 0, k - start_z_index] - u[I - start_x_index_turbine, 0, k - start_z_index]
-                v[I + 1 - start_x_index_turbine, 0, k - start_z_index] = (z / (z + dz)) * (v[I + 1 - start_x_index_turbine, 0, k - 1 - start_z_index] - ((dz / dx) * d_ux))
+                d_ux = disturbed_flow_grid[I + 1 - start_x_index_turbine, 0, k - start_z_index, 0] - disturbed_flow_grid[I - start_x_index_turbine, 0, k - start_z_index, 0]
+                disturbed_flow_grid[I + 1 - start_x_index_turbine, 0, k - start_z_index, 1] = (z / (z + dz)) * (disturbed_flow_grid[I + 1 - start_x_index_turbine, 0, k - 1 - start_z_index, 1] - ((dz / dx) * d_ux))
 
             # Check if we're still warming up - in which case decrement j so
             # we can have another go around
             if i == 1 and warm_up > 0:
                 warm_up -= 1
                 # replace the initial guess with what we just computed
-                v[start_x_index - start_x_index_turbine, 0, :] = v[start_x_index - start_x_index_turbine + 1, 0, :]
+                disturbed_flow_grid[start_x_index - start_x_index_turbine, 0, :, 1] = disturbed_flow_grid[start_x_index - start_x_index_turbine + 1, 0, :, 1]
                 i -= 1
 
             # Increment j
             i += 1
 
             # Update centreline velocity at present x coordinate. TODO check logic
-            D_m = 1 - (u[I - start_x_index_turbine, 0, 0] / u_0)
+            D_m = 1 - (disturbed_flow_grid[I - start_x_index_turbine, 0, 0, 0] / u_0)
             self.centreline_vdf[I - start_x_index_turbine] = D_m
 
             # Update width parameter at present x_coordinate
@@ -280,12 +280,13 @@ class Ainslie(BaseWake):
 
         # fill in the gaps up to the start_x index with the value at start_x_inx + 1
         for i in range(start_x_index - start_x_index_turbine):
-            u[i, 0, :] = u[start_x_index - start_x_index_turbine + 1, 0, :]
-            v[i, 0, :] = v[start_x_index - start_x_index_turbine + 1, 0, :]
+            disturbed_flow_grid[i, 0, :, 0] = disturbed_flow_grid[start_x_index - start_x_index_turbine + 1, 0, :, 0]
+            disturbed_flow_grid[i, 0, :, 1] = disturbed_flow_grid[start_x_index - start_x_index_turbine + 1, 0, :, 1]
 
         # set velocities over full r range at last x coordinate equal to those of second last coordinate
-        u[-1, 0, :] = u[-2, 0, :]
-        v[-1, 0, :] = v[-2, 0, :]
+        disturbed_flow_grid[-1, 0, :, 0] = disturbed_flow_grid[-2, 0, :, 0]
+        disturbed_flow_grid[-1, 0, :, 1] = disturbed_flow_grid[-2, 0, :, 1]
+
         
-        u = np.abs(u)
-        self.set_disturbed_flow_grid(u)
+        disturbed_flow_grid = np.abs(disturbed_flow_grid)
+        self.set_disturbed_flow_grid(disturbed_flow_grid)

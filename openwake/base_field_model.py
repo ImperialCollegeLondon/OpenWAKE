@@ -40,7 +40,6 @@ class BaseField(object):
         try:
             self.disturbed_flow_grid
         except AttributeError:
-            print("here")
             self.calc_disturbed_flow_grid()
         else:
             pass

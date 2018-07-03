@@ -33,6 +33,6 @@ class GeometricSum(BaseWakeCombination):
         undisturbed_flow_dir_at_point = undisturbed_flow_at_point / undisturbed_flow_mag_at_point
 
         if mag == True:
-            return velocity_ratio_sum * undisturbed_flow_mag_at_point
+            return np.linalg.norm(velocity_ratio_sum, 2, 1) * undisturbed_flow_mag_at_point
         else:
-            return undisturbed_flow_dir_at_point * velocity_ratio_sum * undisturbed_flow_mag_at_point
+            return np.array(undisturbed_flow_dir_at_point * velocity_ratio_sum * undisturbed_flow_mag_at_point)
