@@ -55,7 +55,6 @@ class BaseWakeCombination(BaseField):
         self.u_j = np.array([flow_field.get_undisturbed_flow_at_point(w.get_turbine().get_coords(), False) for w in wakes])
 
     def set_disturbed_flow_grid(self, disturbed_flow_grid, fine_mesh):
-        #print("1", disturbed_flow_grid[49, 24,20])
         if fine_mesh == True:
             self.fine_disturbed_flow_grid = np.array(disturbed_flow_grid, dtype=np.float64)
         else:
@@ -68,7 +67,6 @@ class BaseWakeCombination(BaseField):
                 self.fine_disturbed_flow_grid
             except AttributeError:
                 self.calc_disturbed_flow_grid(flow_field, wake_field, fine_mesh = True)
-            #print("2", self.fine_disturbed_flow_grid[49, 24, 20])
             return self.fine_disturbed_flow_grid
         else:
             try:
@@ -77,7 +75,7 @@ class BaseWakeCombination(BaseField):
                 self.calc_disturbed_flow_grid(flow_field, wake_field, fine_mesh = False)
             return self.coarse_disturbed_flow_grid
     
-    def get_disturbed_flow_at_point(self, pnt_coords, flow_field, wake_field, mag = False, fine_mesh = True):
+    def get_disturbed_flow_at_point(self, pnt_coords, flow_field, wake_field, mag = False, fine_mesh = False):
         """
         function that gets the created disturbed flow mesh of this wake combination, and accesses a particular
         point from that array.
@@ -228,5 +226,5 @@ class BaseWakeCombination(BaseField):
 
         # Set all results from of zero division to zero.
         wake_freestream_velocity_ratio = set_nan_or_inf_to_zero(wake_freestream_velocity_ratio)
-
+        #print(wake_freestream_velocity_ratio, u_ij, u_j)
         return wake_freestream_velocity_ratio

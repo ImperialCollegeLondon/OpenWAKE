@@ -91,27 +91,16 @@ def plot_wakes(wake_field, wake_combination, turbine_field, flow_field, plane='x
         l_index, r_index = 2, 1
         
     len_l, len_r = len(l_vec), len(r_vec)
-    dl = abs(l_vec[1] - l_vec[0])
 
     x_vec = x_coords
+    layer_indices = np.array([])
 
     # for an xz plane, select only the x and z flow components. for an xy plane, select only the x and y flow components.
     # included are all undisturbed flows in the plane of choice at each turbine coordinate not in the plane of choice
     # Reshape in a multi-dimensional array of shape x, r (be it z or y) and the number of layers (each corresponding to the y or z coordinates of the turbines)
 
-##    undisturbed_flow_contour = np.array([\
-##                                         undisturbed_flow_flatten[s : s + end : increment] \
-##                                         for s in range(start, flow_size, 3)\
-##                                         if any(np.isin(turbines_coords[l_index], l_vec[int((s - start) / 3) % len_l]))\
-##                                         ]).flatten().reshape((len_x, len_r, num_turbines, 2))
-##    print(undisturbed_flow_contour)
-##
-####    disturbed_flow_contour = np.array([\
-####                                         disturbed_flow_flatten[s : s + end : increment] \
-####                                         for s in range(start, flow_size, 3)\
-####                                         if any(np.isin(turbines_coords[l_index], l_vec[int((s - start) / 3) % len_l]))\
-####                                         ]).flatten().reshape((len_x, len_r, num_turbines, 2))
-##    disturbed_flow_contour = np.array(undisturbed_flow_contour)
+    undisturbed_flow_contour, disturbed_flow_contour = np.zeros((len_x, len_r, len_l, 2)), np.zeros((len_x, len_r, len_l, 2))
+    u_undisturbed, u_disturbed, v_undisturbed, v_disturbed = np.array([]), np.array([]), np.array([]), np.array([])
     
     for s in range(start, flow_size, 3):
         # (3 * len_z * len_y) is the number of flattened elements in each x row
@@ -129,56 +118,36 @@ def plot_wakes(wake_field, wake_combination, turbine_field, flow_field, plane='x
         if len(l_contour_index) != 0:
             undisturbed_flow_contour[x_contour_index, r_contour_index, l_contour_index[0]] = \
                                                       undisturbed_flow_flatten[s : s + end : increment]
+            
             disturbed_flow_contour[x_contour_index, r_contour_index, l_contour_index[0]] = \
                                                     disturbed_flow_flatten[s : s + end : increment]
-    
+            
+            u_undisturbed = np.append(u_undisturbed, undisturbed_flow_flatten[s])
+            u_disturbed = np.append(u_disturbed, disturbed_flow_flatten[s])
+            v_undisturbed = np.append(v_undisturbed, undisturbed_flow_flatten[s + increment])
+            v_disturbed = np.append(v_disturbed, disturbed_flow_flatten[s + increment])
 
     # set turbine coords of minimum x coordinate as origin
     origin_coords = np.array([0,0,0])
+
+    #num_layers = layer_indices.size
     
-##    for i in range(len_x):
-##        x = x_coords[i]
-##        for j in range(len_r):
-##            # if xz plane, r is current z value, else r is current y value
-##            if plane == 'xz':
-##                z = z_coords[j]
-##            else:
-##                y = y_coords[j]
-##                
-##            for k in range(num_turbines):
-##                # if xz plane, layer l is current turbine y value, else l is current turbine z value
-##                if plane == 'xz':
-##                    y = turbines[k].get_coords()[l_index]
-##                else:
-##                    z = turbines[k].get_coords()[l_index]
-##                
-##                #undisturbed_flow_contour[i, j, k] = flow_field.get_undisturbed_flow_at_point([x, y, z], False)[start : end : increment]
-##                
-##                # TODO same irrespective of any single wake or combination of wakes
-##                # combination unchanging for different values of relative z at each turbine, or negative values of relative z
-##                disturbed_flow_contour[i, j, k] = wake_combination.get_disturbed_flow_at_point([x, y, z], flow_field, wake_field, False, True)[start : end : increment]
-
-                #print([i,j,k], [x, y, z], disturbed_flow_contour[i, j, k, 0])
-
-##                # append y or z coordinate to r_vec, but only once
-##                if i == 0 and j == 0:
-##                    rel_pos = relative_position(origin_coords, np.array([x, y, z]), flow_field)
-##                    if plane == 'xz':
-##                        np.append(r_vec, rel_pos[2])
-##                    elif plane == 'xy':
-##                        np.append(r_vec, rel_pos[1])
-    
-##        # append x coordinate to x_vec, but only once
-##        np.append(x_vec, rel_pos[0])
-
     ## PLOT UNDISTURBED AND DISTURBED FLOW CONTOURS
     # u and v are x and y or z components of quiver coordinates.
-    x_vec, r_vec = np.meshgrid(x_vec, r_vec, indexing='ij')
+    x_grid, r_grid = np.meshgrid(x_vec, r_vec, indexing='ij')
+    u_undisturbed_grid, v_undisturbed_grid = np.meshgrid(u_undisturbed, v_undisturbed, indexing='ij')
+    u_disturbed_grid, v_disturbed_grid = np.meshgrid(u_disturbed, v_disturbed, indexing='ij')
     x_min = np.amin(x_vec); x_max = np.amax(x_vec)
     r_min = np.amin(r_vec); r_max = np.amax(r_vec)
 
     wake_fig, wake_axes = plt.subplots(1, 2, constrained_layout = True)
     flow_contours = [undisturbed_flow_contour, disturbed_flow_contour]
+
+    flow_fig, flow_axes = plt.subplots(1, 2, constrained_layout=True)
+    flow_contours_flattened = [undisturbed_flow_contour.flatten(), disturbed_flow_contour.flatten()]
+    u_quivers = [u_undisturbed_grid, u_disturbed_grid]
+    v_quivers = [v_undisturbed_grid, v_disturbed_grid]
+    
     num_flows = len(flow_contours)
 
     for i in range(num_flows):
@@ -186,45 +155,27 @@ def plot_wakes(wake_field, wake_combination, turbine_field, flow_field, plane='x
         wake_axes[i].set_ylabel('Transverse Distance, x (m)')
         wake_axes[i].set_xlim(x_min, x_max)
         wake_axes[i].set_ylim(r_min, r_max)
-
         wake_axes[i].set_title('Undisturbed Flow Contour') if i == 0 else wake_axes[1].set_title('Disturbed Flow Contour')
+
+        flow_axes[i].set_xlabel('Longitudinal Distance, r (m)')
+        flow_axes[i].set_ylabel('Transverse Distance, x (m)')
+        flow_axes[i].set_xlim(x_min, x_max)
+        flow_axes[i].set_ylim(r_min, r_max)
+        flow_axes[i].set_title('Undisturbed Flow Quiver') if i == 0 else flow_axes[1].set_title('Disturbed Flow Quiver')
 
         for t in range(num_turbines):
             turbine_radius = turbines[t].get_radius()
             turbine_coords = turbines[t].get_coords()
             rel_index = relative_index(origin_coords, turbine_coords, flow_field)
             x, r  = rel_index[0], rel_index[r_index]
+            
             turbine_rect = Rectangle((x, r - turbine_radius), 1, 2 * turbine_radius, hatch = '//')
             wake_axes[i].add_patch(turbine_rect)
-            wake_axes[i].contourf(x_vec, r_vec, np.linalg.norm(flow_contours[i][:,:,t], 2, 2), cmap='bwr')           
-            #wake_axes[i].contourf(u, v, np.transpose(np.linalg.norm(flow_contours[i][:,:,t], 2, 2)), cmap='bwr')
+            wake_axes[i].contourf(x_grid, r_grid, np.linalg.norm(flow_contours[i][:,:,t], 2, 2), cmap='bwr')
 
-    undisturbed_flow_flattened = np.array(undisturbed_flow_contour).flatten()
-    disturbed_flow_flattened = np.array(disturbed_flow_contour).flatten()
-    flow_contours_flattened = [undisturbed_flow_flattened, disturbed_flow_flattened]
-    
-    flow_fig, flow_axes = plt.subplots(1, 2, constrained_layout=True)
-    
-    for i in range(num_flows):
-        flow_axes[i].set_xlabel('Longitudinal Distance, r (m)')
-        flow_axes[i].set_ylabel('Transverse Distance, x (m)')
-        flow_axes[i].set_xlim(x_min, x_max)
-        flow_axes[i].set_ylim(r_min, r_max)
-
-        flow_axes[i].set_title('Undisturbed Flow Quiver') if i == 0 else flow_axes[1].set_title('Disturbed Flow Quiver')
-
-        u = [[f for f in flow_contours_flattened[i]][0:flow_size:2]]
-        v = [[f for f in flow_contours_flattened[i]][1:flow_size:2]]
-        
-        flow_axes[i].quiver(x_vec, r_vec, u, v, scale = 200, alpha = 0.9)
-        
-        for t in turbines:
-            turbine_radius = t.get_radius()
-            turbine_coords = relative_position(origin_coords, t.get_coords(), flow_field)
-            rel_index = relative_index(origin_coords, turbine_coords, flow_field)
-            x, r  = rel_index[0], rel_index[r_index]
             turbine_rect = Rectangle((x, r - turbine_radius), 1, 2 * turbine_radius, hatch = '//')
             flow_axes[i].add_patch(turbine_rect)
+            flow_axes[i].quiver(x_grid, r_grid, u_quivers[i], v_quivers[i], scale = 200, alpha = 0.9)
 
     plt.show()
 

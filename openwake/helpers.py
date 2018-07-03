@@ -3,9 +3,8 @@ import numpy as np
 def relative_index(origin_pnt_coords, pnt_coords, flow_field):
     x_coords, y_coords, z_coords = flow_field.get_x_coords(), flow_field.get_y_coords(), flow_field.get_z_coords()
     rel_pnt_coords = np.array(pnt_coords - origin_pnt_coords)
-    # TODO ensure on input that there is common dx, dy, dz
-    dx, dy, dz = abs(x_coords[1] - x_coords[0]), abs(y_coords[1] - y_coords[0]), abs(z_coords[1] - z_coords[0])
-    rel_x_inx, rel_y_inx, rel_z_inx = int(rel_pnt_coords[0]/dx), int(rel_pnt_coords[1]/dy), int(rel_pnt_coords[2]/dz)
+    dx, dy, dz = flow_field.get_dx(), flow_field.get_dy(), flow_field.get_dz()
+    rel_x_inx, rel_y_inx, rel_z_inx = int(rel_pnt_coords[0] / dx), int(rel_pnt_coords[1] / dy), int(rel_pnt_coords[2] / dz)
     return np.array([rel_x_inx, rel_y_inx, rel_z_inx])
 
 def point_axis_reflection(origin_pnt_coords, pnt_coords, flow_field):

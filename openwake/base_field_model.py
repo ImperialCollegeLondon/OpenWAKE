@@ -36,19 +36,6 @@ class BaseField(object):
         else:
             self.wake_field = wake_field
 
-    def get_disturbed_flow_grid(self):
-        try:
-            self.disturbed_flow_grid
-        except AttributeError:
-            self.calc_disturbed_flow_grid()
-        else:
-            pass
-
-        return self.disturbed_flow_grid
-
-    def set_disturbed_flow_grid(self, disturbed_flow_grid):
-        self.disturbed_flow_grid = np.array(disturbed_flow_grid)
-
     def generate_disturbed_flow_grid(self):
         """
         Generate empty u, v and w arrays corresponding to the

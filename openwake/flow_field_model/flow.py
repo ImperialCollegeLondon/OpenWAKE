@@ -46,6 +46,29 @@ class FlowField(object):
     def get_flow(self):
         return self.flow
 
+    def set_dx(self, dx):
+        self.dx = dx
+
+    def set_dy(self, dy):
+        self.dy = dy
+
+    def set_dz(self, dz):
+        self.dz = dz
+
+    def get_dx(self):
+        return self.dx
+
+    def get_dy(self):
+        return self.dy
+
+    def get_dz(self):
+        return self.dz
+
+    def is_in_flow_field(self, pnt_coords):
+        return any(np.isin(self.get_x_coords(), pnt_coords[0])) \
+               and any(np.isin(self.get_y_coords(), pnt_coords[1])) \
+               and any(np.isin(self.get_z_coords(), pnt_coords[2])) 
+    
     def set_x_coords(self, x_coords = []):
         try:
             assert isinstance(x_coords, list)
@@ -53,6 +76,16 @@ class FlowField(object):
         except AssertionError:
             raise TypeError("'x_coords' must be of type 'list', where each element is of type 'int' or 'float'")
         else:
+            if len(x_coords) > 1:
+                dx_arr = np.diff(x_coords)
+                dx = dx_arr.min()
+                self.set_dx(dx)
+                # if dx is not always equal and monotonoically increasing, interpolate in order
+                if not all(d == dx_arr[0] for d in dx_arr) or any(dx_arr < 0):
+                    x_coords = np.arange(min(x_coords), max(x_coords) + dy, dx).tolist()
+            else:
+                self.set_dx(1)
+            
             self.x_coords =  np.array(x_coords, dtype=np.float64)
 
     def set_y_coords(self, y_coords = []):
@@ -62,6 +95,16 @@ class FlowField(object):
         except AssertionError:
             raise TypeError("'y_coords' must be of type 'list', where each element is of type 'int' or 'float'")
         else:
+            if len(y_coords) > 1:
+                dy_arr = np.diff(y_coords)
+                dy = dy_arr.min() if len(dy_arr) > 1 else 0
+                self.set_dy(dy)
+                # if dy is not always equal and monotonoically increasing, interpolate in order
+                if not all(d == dy_arr[0] for d in dy_arr) or any(dy_arr < 0):
+                    y_coords = np.arange(min(y_coords), max(y_coords) + dy, dy).tolist()
+            else:
+                self.set_dy(1)
+            
             self.y_coords =  np.array(y_coords, dtype=np.float64)
 
     def set_z_coords(self, z_coords = []):
@@ -72,6 +115,16 @@ class FlowField(object):
         except AssertionError:
             raise TypeError("'z_coords' must be of type 'list', where each element is of type 'int' or 'float'")
         else:
+            if len(z_coords) > 1:
+                dz_arr = np.diff(z_coords)
+                dz = dz_arr.min() if len(dz_arr) > 1 else 0
+                self.set_dz(dz)
+                # if dz is not always equal and monotonoically increasing, interpolate in order
+                if not all(d == dz_arr[0] for d in dz_arr) or any(dz_arr < 0):
+                    z_coords = np.arange(min(z_coords), max(z_coords) + dz, dz).tolist()
+            else:
+                self.set_dz(1)
+                
             self.z_coords =  np.array(z_coords, dtype=np.float64)
 
     def set_flow(self, flow = [0,0,0]):
