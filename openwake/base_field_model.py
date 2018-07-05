@@ -36,25 +36,25 @@ class BaseField(object):
         else:
             self.wake_field = wake_field
 
-    def generate_disturbed_flow_grid(self):
-        """
-        Generate empty u, v and w arrays corresponding to the
-        x, y and z components of the disturbed flow speed at
-        each x, y and z coordinate due to a single wake or
-        combination of wakes.
-        """
-        
-        flow_field = self.get_flow_field()
-        x_coords, y_coords, z_coords = flow_field.get_x_coords(), flow_field.get_y_coords(), flow_field.get_z_coords()
-        len_x, len_y, len_z = x_coords.size, y_coords.size, z_coords.size
-        x_grid, y_grid, z_grid = np.meshgrid(x_coords, y_coords, z_coords, indexing='ij')
-
-        # initialise the solution matrices, holding direction data for flow in wake
-        # assumes that the flow is orthogonal to the turbine area
-        #u = np.linalg.norm(flow_field.get_flow(), 2, 3).flatten().reshape((len_x, len_y, len_z))
-        u = flow_field.get_flow().flatten()[0::3].reshape((len_x, len_y, len_z))
-        v = flow_field.get_flow().flatten()[1::3].reshape((len_x, len_y, len_z))
-        w = flow_field.get_flow().flatten()[2::3].reshape((len_x, len_y, len_z))
-
-        #return x_grid, y_grid, z_grid, u, v, w
-        return  x_coords, y_coords, z_coords, u, v, w
+##    def generate_disturbed_flow_grid(self):
+##        """
+##        Generate empty u, v and w arrays corresponding to the
+##        x, y and z components of the disturbed flow speed at
+##        each x, y and z coordinate due to a single wake or
+##        combination of wakes.
+##        """
+##        
+##        flow_field = self.get_flow_field()
+##        x_coords, y_coords, z_coords = flow_field.get_x_coords(), flow_field.get_y_coords(), flow_field.get_z_coords()
+##        len_x, len_y, len_z = x_coords.size, y_coords.size, z_coords.size
+##        x_grid, y_grid, z_grid = np.meshgrid(x_coords, y_coords, z_coords, indexing='ij')
+##
+##        # initialise the solution matrices, holding direction data for flow in wake
+##        # assumes that the flow is orthogonal to the turbine area
+##        #u = np.linalg.norm(flow_field.get_flow(), 2, 3).flatten().reshape((len_x, len_y, len_z))
+##        u = flow_field.get_flow().flatten()[0::3].reshape((len_x, len_y, len_z))
+##        v = flow_field.get_flow().flatten()[1::3].reshape((len_x, len_y, len_z))
+##        w = flow_field.get_flow().flatten()[2::3].reshape((len_x, len_y, len_z))
+##
+##        #return x_grid, y_grid, z_grid, u, v, w
+##        return  x_coords, y_coords, z_coords, u, v, w

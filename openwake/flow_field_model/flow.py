@@ -19,13 +19,14 @@ class FlowField(object):
         # check if there is a y-coord for every x-coord, that the number of rows in each flow list correspond to a y-coord, and that the number of columns in each flow list correspond to an x-coord
 
         try:
-            assert len(x_coords) == len(y_coords) == len(z_coords)
-            if len(flow) != 0:
-                assert np.array(flow).shape == ( (len(x_coords), len(y_coords), len(z_coords), 3 ) )
-            assert isinstance(x_coords, list)
-            assert isinstance(y_coords, list)
-            assert isinstance(z_coords, list)
-            assert isinstance(flow, list)
+            assert np.array(x_coords).size == np.array(y_coords).size == np.array(z_coords).size
+            assert isinstance(x_coords, (list, np.ndarray))
+            assert isinstance(y_coords, (list, np.ndarray))
+            assert isinstance(z_coords, (list, np.ndarray))
+            assert isinstance(flow, (list, np.ndarray))
+            if np.array(flow).size > 0:
+                assert np.array(flow).shape == ( (np.array(x_coords).size, np.array(y_coords).size, np.array(z_coords).size, 3 ) )
+            
         except AssertionError:
             raise ValueError("'x_coords must be the same length as 'y_coords' and 'z_coords'. The shape of 'flow' should be (len(x_coords), len(y_coords), len(z_coords), 3)")
         else:
@@ -71,7 +72,7 @@ class FlowField(object):
     
     def set_x_coords(self, x_coords = []):
         try:
-            assert isinstance(x_coords, list)
+            assert isinstance(x_coords, (list, np.ndarray))
             assert all(isinstance(c, (float,int)) for c in x_coords)
         except AssertionError:
             raise TypeError("'x_coords' must be of type 'list', where each element is of type 'int' or 'float'")
@@ -90,7 +91,7 @@ class FlowField(object):
 
     def set_y_coords(self, y_coords = []):
         try:
-            assert isinstance(y_coords, list)
+            assert isinstance(y_coords, (list, np.ndarray))
             assert all(isinstance(c, (float,int)) for c in y_coords)
         except AssertionError:
             raise TypeError("'y_coords' must be of type 'list', where each element is of type 'int' or 'float'")
@@ -110,7 +111,7 @@ class FlowField(object):
     def set_z_coords(self, z_coords = []):
         default_z_coords = []
         try:
-            assert isinstance(z_coords, list)
+            assert isinstance(z_coords, (list, np.ndarray))
             assert all(isinstance(c, (float,int)) for c in z_coords)
         except AssertionError:
             raise TypeError("'z_coords' must be of type 'list', where each element is of type 'int' or 'float'")
@@ -133,7 +134,7 @@ class FlowField(object):
         flow_arr_flatten = flow_arr.flatten()
 
         try:
-            assert isinstance(flow, list)
+            assert isinstance(flow, (list, np.ndarray))
             assert all(isinstance(f, (float,int, np.int64, np.float64)) for f in flow_arr_flatten) 
         except AssertionError:
             raise TypeError("'flow' must be of type three-dimensional 'list', where the first dimension represents a row in space, the second a column in space, and the third a list of the flow components (x,y,z) at that point in space with three elements of type 'int' or 'float'")
@@ -152,7 +153,7 @@ class FlowField(object):
 
         return np.array(gradient)
 
-    def get_undisturbed_flow_at_point(self, pnt_coords, mag = False):
+    def get_undisturbed_flow_at_point(self, pnt_coords, mag = False, direction = False):
         """
         Returns the flow at a point in the flow-field, given the point coordinates and the combined wake at that point.
         param pnt_Coords list of [x,y,z] coordinates
@@ -174,6 +175,12 @@ class FlowField(object):
         undisturbed_flow_at_point = np.array(flow[x_coord_index, y_coord_index, z_coord_index], dtype=np.float64)
         if mag == True:
             undisturbed_flow_at_point = np.linalg.norm(undisturbed_flow_at_point, 2) if isinstance(undisturbed_flow_at_point, (list, np.ndarray)) else undisturbed_flow_at_point
+        elif direction == True:
+            try:
+                undisturbed_flow_at_point = undisturbed_flow_at_point / np.linalg.norm(undisturbed_flow_at_point, 2)
+            except ZeroDivisionError:
+                undisturbed_flow_at_point = np.array([0,0,0])
+
         return undisturbed_flow_at_point
 
 

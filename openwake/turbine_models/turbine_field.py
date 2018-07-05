@@ -18,4 +18,4 @@ class TurbineField(object):
         return self.get_turbines().size
 
     def get_coords(self):
-        return self.coords
+        return np.array(self.coords)

@@ -27,12 +27,12 @@ class EnergyBalance(BaseWakeCombination):
 
         # subtract ratio from one for each element corresponding to turbine j,
         # and sum energy balance
-        energy_balance_sum = np.sum((u_j**2-u_ij**2), axis=0)
-        undisturbed_flow_at_point = flow_field.get_undisturbed_flow_at_point(pnt_coords, False)
-        undisturbed_flow_mag_at_point = np.linalg.norm(undisturbed_flow_at_point, 2)
+        energy_balance_sum = np.sum( ( u_j**2 - u_ij**2 ), axis = 0 )
+        undisturbed_flow_at_point = flow_field.get_undisturbed_flow_at_point( pnt_coords, False )
+        undisturbed_flow_mag_at_point = np.linalg.norm( undisturbed_flow_at_point, 2 )
         undisturbed_flow_dir_at_point = undisturbed_flow_at_point / undisturbed_flow_mag_at_point
 
         if mag == True:
-            return (undisturbed_flow_mag_at_point**2 - np.linalg.norm(energy_balance_sum, 2, 1))**0.5
+            return ( undisturbed_flow_mag_at_point**2 - np.linalg.norm( energy_balance_sum, 2 ) )**0.5
         else:
-            return np.array(undisturbed_flow_dir_at_point * (undisturbed_flow_mag_at_point**2 - energy_balance_sum)*0.5)
+            return np.array( undisturbed_flow_dir_at_point * ( undisturbed_flow_mag_at_point**2 - np.linalg.norm( energy_balance_sum, 2 ) )*0.5 )

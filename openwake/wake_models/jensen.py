@@ -22,24 +22,24 @@ class Jensen(BaseWake):
         else:
             self.wake_decay = wake_decay
 
-    def calc_wake_radius(self, pnt_coords, turbine_coords, flow_field, turbine_radius, thrust_coefficient):
+    def calc_wake_radius(self, rel_pnt_coords, turbine_coords, flow_field, turbine_radius, thrust_coefficient):
         """
         Returns the radius of the wake at a point
         given that point is in wake of turbine
         param pnt_coords point at which to calculate the radius of the wake
         """
 
-        rel_pnt_coords = relative_position(turbine_coords, pnt_coords, flow_field)
+        #rel_pnt_coords = relative_position(turbine_coords, pnt_coords, flow_field)
         wake_decay = self.get_wake_decay()
         x_rel = rel_pnt_coords[0]
         
         return turbine_radius + (wake_decay * x_rel)
 
-    def calc_vrf_at_point(self, pnt_coords, turbine_coords, flow_field, turbine_radius, thrust_coefficient, u_0):
-        if self.is_in_wake(pnt_coords, turbine_coords, turbine_radius, thrust_coefficient, flow_field):
+    def calc_vrf_at_point(self, rel_pnt_coords, turbine_coords, flow_field, turbine_radius, thrust_coefficient, u_0):
+        if self.is_in_wake(rel_pnt_coords, turbine_coords, turbine_radius, thrust_coefficient, flow_field):
             wake_decay = self.get_wake_decay()
-            x_rel, y_rel, z_rel = relative_position(turbine_coords, pnt_coords, flow_field)
-            
+            #x_rel, y_rel, z_rel = relative_position(turbine_coords, pnt_coords, flow_field)
+            x_rel = rel_pnt_coords[0]
             return (1 - thrust_coefficient)**0.5/((1 + (wake_decay * x_rel / turbine_radius))**2)
         else:
             return 0

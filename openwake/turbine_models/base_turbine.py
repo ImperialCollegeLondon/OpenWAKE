@@ -123,7 +123,7 @@ class BaseTurbine(object):
 
     def set_direction(self, direction = [-1,0, 0]):
         try:
-            assert isinstance(direction, list)
+            assert isinstance(direction, (list, np.ndarray))
             assert len(direction) == 3
             assert all(isinstance(d, (float,int)) for d in direction)
         except AssertionError:
@@ -159,7 +159,7 @@ class BaseTurbine(object):
         power_coefficient = self.calc_power_coefficient(flow_mag_at_turbine)
         area = self.calc_area()
         flow_mag_at_turbine = np.linalg.norm(flow_mag_at_turbine,2) if isinstance(flow_mag_at_turbine, (list, np.ndarray)) else flow_mag_at_turbine
-        power_extracted = k1 * rho * flow_mag_at_turbine**k2 * area
+        power_extracted = k1 * rho * flow_mag_at_turbine**k2 * area * power_coefficient
         return power_extracted
 
     def set_turbine_field(self, turbine_field = TurbineField()):

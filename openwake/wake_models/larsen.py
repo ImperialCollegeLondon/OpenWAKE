@@ -23,7 +23,7 @@ class Larsen(BaseWake):
         """
         k1, k2, k3 = 1.08, 21.7, 0.05
         val1 = k1 * turbine_diameter
-        val2 = val1 + ((k2 * turbine_diameter) * (ambient_intensity - k3))
+        val2 = val1 + (k2 * turbine_diameter * (ambient_intensity - k3))
         return np.max([val1, val2])
     
     def calc_r_9_point_5(self, turbine_diameter, ambient_intensity, hub_height):
@@ -36,9 +36,9 @@ class Larsen(BaseWake):
         """
         k1 = 0.5
         r_nb = self.calc_r_nb(turbine_diameter, ambient_intensity)
-        return k1*(r_nb + min([hub_height, r_nb]))
+        return k1 * (r_nb + min([hub_height, r_nb]))
 
-    def calc_x0(self, thrust_coefficient, turbine_diameter, hub_height, ambient_intensity):
+    def calc_x_0(self, thrust_coefficient, turbine_diameter, hub_height, ambient_intensity):
         """
         Calculates the position of the rotor w.r.t the applied
         coordinate system
@@ -46,15 +46,15 @@ class Larsen(BaseWake):
         diameter_9_point_5 = 2 * self.calc_r_9_point_5(turbine_diameter, ambient_intensity, hub_height)
         effective_diameter = self.calc_effective_diameter(thrust_coefficient, turbine_diameter)
         k1, k2 = 9.5, 3
-        return (k1*turbine_diameter)/((diameter_9_point_5/effective_diameter)**k2 - 1)
+        return (k1 * turbine_diameter) / ((diameter_9_point_5 / effective_diameter)**k2 - 1)
 
     def calc_effective_diameter(self, thrust_coefficient, turbine_diameter):
         """
         Calculates effective rotor diameter
         """
-        k1, k2 = 0.5, 2
+        k1, k2 = 1/2, 2
         
-        return turbine_diameter * ((1 + (1 - thrust_coefficient)**k1)/(k2 * (1 - thrust_coefficient)**k1))**k1
+        return turbine_diameter * ((1 + (1 - thrust_coefficient)**k1) / (k2 * (1 - thrust_coefficient)**k1))**k1
     
     def calc_prandtl_mixing(self, thrust_coefficient, turbine_diameter, rotor_disc_area, hub_height, ambient_intensity):
         """
@@ -62,11 +62,11 @@ class Larsen(BaseWake):
         """
 
         effective_radius = self.calc_effective_diameter(thrust_coefficient, turbine_diameter) / 2
-        x0 = self.calc_x0(thrust_coefficient, turbine_diameter, hub_height, ambient_intensity)
+        x_0 = self.calc_x_0(thrust_coefficient, turbine_diameter, hub_height, ambient_intensity)
         
         k1, k2, k3, k4 = 5/2, 105/2, -1/2, -5/6
         
-        return (effective_radius**k1) * ((k2/np.pi)**k3) * ((thrust_coefficient * rotor_disc_area * x0)**k4)
+        return (effective_radius**k1) * ((k2 / np.pi)**k3) * ((thrust_coefficient * rotor_disc_area * x_0)**k4)
  
     def get_wake_decay(self):
         return self.wake_decay
@@ -90,7 +90,7 @@ class Larsen(BaseWake):
         else:
             self.ambient_intensity = ambient_intensity
     
-    def calc_wake_radius(self, pnt_coords, turbine_coords, flow_field, turbine_radius, thrust_coefficient):
+    def calc_wake_radius(self, rel_pnt_coords, turbine_coords, flow_field, turbine_radius, thrust_coefficient):
         """
         Returns the wake radius at point given that point is in the wake of
         turbine
@@ -100,38 +100,42 @@ class Larsen(BaseWake):
         turbine_diameter = 2 * turbine_radius
         hub_height = turbine_coords[2]
         ambient_intensity = self.get_ambient_intensity()
-        
-        x_rel = relative_position(turbine_coords, pnt_coords, flow_field)[0]
-        prandtl_mixing = self.calc_prandtl_mixing(thrust_coefficient, turbine_radius, rotor_disc_area, hub_height, ambient_intensity)
-        x0 = self.calc_x0(thrust_coefficient, turbine_diameter, hub_height, ambient_intensity)
-
+        #x_rel = relative_position(turbine_coords, pnt_coords, flow_field)[0]
+        x_rel = rel_pnt_coords[0]
+        prandtl_mixing = self.calc_prandtl_mixing(thrust_coefficient, turbine_diameter, rotor_disc_area, hub_height, ambient_intensity)
+        x_0 = self.calc_x_0(thrust_coefficient, turbine_diameter, hub_height, ambient_intensity)
         k1, k2, k3, k4, k5 = 35/2, 1/5, 3, 1/3, 2
-        
-        return (k1 / np.pi)**k2 * (k3 * prandtl_mixing**k5)**k2 * (thrust_coefficient * rotor_disc_area * (x_rel + x0))**k4
+        wake_radius = (k1 / np.pi)**k2 * (k3 * prandtl_mixing**k5)**k2 * (thrust_coefficient * rotor_disc_area * (x_rel + x_0))**k4
+        return wake_radius
 
-    def calc_vrf_at_point(self, pnt_coords, turbine_coords, flow_field, turbine_radius, thrust_coefficient, u_0):
-        if self.is_in_wake(pnt_coords, turbine_coords, turbine_radius, thrust_coefficient, flow_field):
+    def calc_vrf_at_point(self, rel_pnt_coords, turbine_coords, flow_field, turbine_radius, thrust_coefficient, u_0):
+        if self.is_in_wake(rel_pnt_coords, turbine_coords, turbine_radius, thrust_coefficient, flow_field):
             turbine_diameter = 2 * turbine_radius
             wake_decay = self.get_wake_decay()
             hub_height = turbine_coords[2]
-            x_rel, y_rel, z_rel = relative_position(turbine_coords, pnt_coords, flow_field)
+            #x_rel, y_rel, z_rel = relative_position(turbine_coords, pnt_coords, flow_field)
+            #r_rel = np.linalg.norm( [y_rel, z_rel], 2)
+            x_rel, r_rel = rel_pnt_coords[0], np.linalg.norm( rel_pnt_coords[1:], 2)
             
             ambient_intensity = self.get_ambient_intensity()
             rotor_disc_area = np.pi * turbine_radius**2
             
             prandtl_mixing = self.calc_prandtl_mixing(thrust_coefficient, turbine_diameter, rotor_disc_area, hub_height, ambient_intensity)
-            x0 = self.calc_x0(thrust_coefficient, turbine_diameter, hub_height, ambient_intensity)
+            x_0 = self.calc_x_0(thrust_coefficient, turbine_diameter, hub_height, ambient_intensity)
 
-            k1, k2, k3, k4, k5, k6, k7, k8, k9 = 1/3, 3/2, 3, -1/2, 3/10, -1/5, 17.5, 1/9, 2
+            k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11 = 1/3, 3/2, 3, -1/2, 3/10, -1/5, 17.5, 1/9, 2, -5/3, -2
             
-            bracket1 = thrust_coefficient * rotor_disc_area / (x_rel + x0)**k9
-            bracket2 = k3 * prandtl_mixing**k9 * thrust_coefficient * rotor_disc_area * (x_rel + x0)
-            bracket3 = k7 / np.pi
+            bracket1 = ( thrust_coefficient * rotor_disc_area * ( x_rel + x_0 )**k11 )**k1
+            bracket3 = ( k7 / np.pi )**k5
             bracket4 = k3 * prandtl_mixing**k9
-            with np.errstate(all="ignore"):
-                velocity_reduction_factor = k8 * (bracket1**k1) * ((abs(z_rel)**k2 * bracket2**k4) - (bracket3**k5 * bracket4**k6))**k9
-            #velocity_reduction_factor = velocity_deficit/u_0# if np.isnan(velocity_deficit) == False and np.isinf(velocity_deficit) == False else 0
-            return velocity_reduction_factor
+            bracket2 = ( bracket4 * thrust_coefficient * rotor_disc_area * (x_rel + x_0) )**k4
+            bracket5 = (thrust_coefficient * rotor_disc_area)**k1
+            bracket6 = ( ( r_rel**k2 * bracket2 ) - ( bracket3 * bracket4**k6 ) )**k9
+            velocity_reduction_factor = np.zeros(2) # TODO add x and r component to all calc_vrf functions
+            #with np.errstate(all="ignore"):
+            velocity_reduction_factor[0] = k8 * bracket1 * bracket6
+            velocity_reduction_factor[1] = k1 * bracket5 * ( x_rel + x_0 )**k10 * r_rel * bracket6
+            return velocity_reduction_factor[0]
 
         else:
             return 0
