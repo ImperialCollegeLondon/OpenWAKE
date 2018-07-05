@@ -192,22 +192,22 @@ def make_wake_contours(wake_field, wake_combination, turbine_field, flow_field, 
     ## PLOT UNDISTURBED AND DISTURBED FLOW CONTOURS
     # u and v are x and y or z components of quiver coordinates.
     x_grid, r_grid = np.meshgrid( x_vec, r_vec, indexing='ij' )
-    if wake_fig == None or wake_axes == None:
-        wake_fig, wake_axes = make_wake_figs(x_vec, r_vec, r_index, turbines)
-
     flow_contours = [undisturbed_flow_contour, disturbed_flow_contour]
+    if plot == True:
+        if wake_fig == None or wake_axes == None:
+            wake_fig, wake_axes = make_wake_figs(x_vec, r_vec, r_index, turbines)
+        plot_wakes( wake_axes, flow_contours, x_grid, r_grid, num_turbines)
+
 
 ##    flow_fig, flow_axes = plt.subplots(1, 2, constrained_layout=True)
 ##    flow_contours_flattened = [undisturbed_flow_contour.flatten(), disturbed_flow_contour.flatten()]
 ##    u_quivers = [u_undisturbed_vec, u_disturbed_vec]
 ##    v_quivers = [v_undisturbed_vec, v_disturbed_vec]
 
-    if plot == True:
-        plot_wakes( wake_axes, flow_contours, x_grid, r_grid, num_turbines)
-        
     return flow_contours
 
 def plot_power_vs_flow_dir(wake_field, wake_combination, turbine_field, flow_field):
+    wakes = wake_field.get_wakes()
     turbines = turbine_field.get_turbines()
     num_turbines = turbine_field.get_num_turbines()
     num_frames = 15
@@ -226,17 +226,19 @@ def plot_power_vs_flow_dir(wake_field, wake_combination, turbine_field, flow_fie
     for alpha in alpha_arr:
         power = 0
         
-        flow_alpha = np.zeros(flow_shape)
+        flow_alpha = np.ones(flow_shape)
+        flow_alpha[:,:,:] = np.cos(alpha) * flow_mag_mean, np.sin(alpha) * flow_mag_mean, 0
 
-        for c in range(num_turbines):
-            i, j, k = relative_index(origin_coords, [turbines_coords[c], turbines_coords[c + num_turbines], turbines_coords[c + (2 * num_turbines)]], flow_field)
-            flow_alpha[i, j, k] = np.array([np.cos(alpha), np.sin(alpha), 0]) * flow_mag_mean
-        flow_field_alpha = FlowField(x_coords.tolist(), y_coords.tolist(), z_coords.tolist(), flow_alpha.tolist())
+##        for c in range(num_turbines):
+##            i, j, k = relative_index(origin_coords, [turbines_coords[c], turbines_coords[c + num_turbines], turbines_coords[c + (2 * num_turbines)]], flow_field)
+##            flow_alpha[i, j, k] = np.array([np.cos(alpha), np.sin(alpha), 0]) * flow_mag_mean
+        flow_field_alpha = FlowField( x_coords, y_coords, z_coords, flow_alpha )
         for t in turbines:
             turbine_coords = t.get_coords()
             wake_combination.is_grid_outdated = True
+            for w in wakes:
+                w.is_grid_outdated = True
             disturbed_flow_mag_at_turbine = wake_combination.get_disturbed_flow_at_point(turbine_coords, flow_field_alpha, wake_field, True, False, False)
-            print(disturbed_flow_mag_at_turbine)
             power += t.calc_power_op(disturbed_flow_mag_at_turbine)
         power_arr.append(power)
 
@@ -248,6 +250,7 @@ def plot_power_vs_flow_dir(wake_field, wake_combination, turbine_field, flow_fie
     plt.show()
 
 def plot_wakes_vs_flow_dir(wake_field, wake_combination, turbine_field, flow_field):
+    wakes = wake_field.get_wakes()
     turbines = turbine_field.get_turbines()
     num_turbines = turbine_field.get_num_turbines()
     num_frames = 15
@@ -265,37 +268,48 @@ def plot_wakes_vs_flow_dir(wake_field, wake_combination, turbine_field, flow_fie
     origin_coords = np.array([0, 0, 0])
 
     x_vec, r_vec, r_index = x_coords, y_coords, 1
-    
-    wake_fig, wake_axes = make_wake_figs(x_vec, r_vec, r_index, turbines)
-    wake_axes = wake_axes[1]
+
+    step = 0.2
+    levels = np.arange(0.0, 10, step)
+    x_grid, r_grid = np.meshgrid( x_vec, r_vec, indexing='ij' )
 
     contour_alpha = []
 
-    def animate(i):
-        print(i)
-        wake_axes.clear()
-        step = 0.2
-        levels = np.arange(0.0, 10, step)
-        x_grid, r_grid = np.meshgrid( x_vec, r_vec, indexing='ij' )
-        for t in range( num_turbines ):
-            f_grid = np.linalg.norm(contour_alpha[i][:,:,t], 2, 2)
-            contour = wake_axes.contourf(x_grid, r_grid, f_grid, levels, cmap='bwr', alpha = 0.2)
-            wake_axes.set_title('%03d'%(i)) 
+##    def animate(i):
+##        print(i)
+##        wake_axes.clear()
+##        step = 0.2
+##        levels = np.arange(0.0, 10, step)
+##        x_grid, r_grid = np.meshgrid( x_vec, r_vec, indexing='ij' )
+##        for t in range( num_turbines ):
+##            f_grid = np.linalg.norm(contour_alpha[i][:,:,t], 2, 2)
+##            contour = wake_axes.contourf(x_grid, r_grid, f_grid, levels, cmap='bwr', alpha = 0.2)
+##            wake_axes.set_title('%03d'%(i)) 
     
     for alpha in alpha_arr:
         power = 0
         
-        flow_alpha = np.zeros(flow_shape)
+        flow_alpha = np.ones(flow_shape)
+        flow_alpha[:,:,:] = np.cos(alpha) * flow_mag_mean, np.sin(alpha) * flow_mag_mean, 0
+##        for t in range(num_turbines):
+##            i, j, k = int( turbines_coords[t] / dx ), int( turbines_coords[t + num_turbines] / dy ), int( turbines_coords[t + (2 * num_turbines)] / dz )
+##            flow_alpha[i, j, k] = np.array([np.cos(alpha), np.sin(alpha), 0]) * flow_mag_mean
 
-        for c in range(num_turbines):
-            i, j, k = int( turbines_coords[c] / dx ), int( turbines_coords[c + num_turbines] / dy ), int( turbines_coords[c + (2 * num_turbines)] / dz )
-            flow_alpha[i, j, k] = np.array([np.cos(alpha), np.sin(alpha), 0]) * flow_mag_mean
-            flow_field_alpha = FlowField(x_coords.tolist(), y_coords.tolist(), z_coords.tolist(), flow_alpha.tolist())
+        flow_field_alpha = FlowField( x_coords, y_coords, z_coords, flow_alpha )
+        wake_combination.is_grid_outdated = True
+        for w in wakes:
+            w.is_grid_outdated = True
 
-        flow_field_alpha = FlowField(x_coords, y_coords, z_coords, flow_alpha)
-        contour_alpha.append( make_wake_contours(wake_field, wake_combination, turbine_field, flow_field_alpha, 'xy', wake_fig, wake_axes, False)[1] )
+        wake_fig, wake_axes = make_wake_figs(x_vec, r_vec, r_index, turbines)
+        wake_axes = wake_axes[1]
+        contour_alpha = make_wake_contours(wake_field, wake_combination, turbine_field, flow_field_alpha, 'xy', wake_fig, wake_axes, False)[1]
 
-    ani = animation.FuncAnimation( wake_fig, animate, num_frames, interval = 500, blit = False)
+        for t in range(num_turbines):
+            f_grid = np.linalg.norm(contour_alpha[:,:,t], 2, 2)
+            contour = wake_axes.contourf(x_grid, r_grid, f_grid, levels, cmap='bwr', alpha = 0.2)
+            wake_axes.set_title('%03d'%(t)) 
+
+    #ani = animation.FuncAnimation( wake_fig, animate, num_frames, interval = 500, blit = False)
 
     plt.show()
     

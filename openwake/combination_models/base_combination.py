@@ -33,20 +33,15 @@ class BaseWakeCombination(BaseField):
         Sets the list of speed magnitudes at turbine i (pnt_coords) due to the wake of turbine j
         param u_ij list of float or int
         """
-        self.u_ij = []
         wakes = wake_field.get_wakes()
-        for w in wakes:
-            w.set_grid_outdated( True )
-            self.u_ij.append( w.get_disturbed_flow_at_point(pnt_coords, flow_field, False ) )
+        self.u_ij = np.array([w.get_disturbed_flow_at_point(pnt_coords, flow_field, False ) for w in wakes ] )
         self.u_ij = np.array( self.u_ij )
 
-        
     def set_u_j(self, flow_field, wake_field):
         """
         Sets the list of speed magnitudes at turbine j TODO undisturbed or disturbed???
         param u_j list of float or int
         """
-        self.u_j = []
         wakes = wake_field.get_wakes()
         self.u_j = np.array( [ ( flow_field.get_undisturbed_flow_at_point(w.get_turbine().get_coords(), False ) ) for w in wakes ] )
 
@@ -58,6 +53,8 @@ class BaseWakeCombination(BaseField):
         self.set_grid_outdated(False)
 
     def get_disturbed_flow_grid(self, flow_field, wake_field, fine_mesh):
+        if self.is_grid_outdated:
+            self.calc_disturbed_flow_grid(flow_field, wake_field, fine_mesh)
         if fine_mesh == True:
             try:
                 self.fine_disturbed_flow_grid
@@ -76,7 +73,7 @@ class BaseWakeCombination(BaseField):
         function that gets the created disturbed flow mesh of this wake combination, and accesses a particular
         point from that array.
         """
-
+        wakes = wake_field.get_wakes()
         # check if disturbed flow grid needs updating
         if self.is_grid_outdated or (fine_mesh == True and not hasattr(self, 'fine_disturbed_flow_grid')) or (fine_mesh == False and not hasattr(self, 'coarse_disturbed_flow_grid')):
             self.calc_disturbed_flow_grid(flow_field, wake_field, fine_mesh)
