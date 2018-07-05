@@ -78,7 +78,7 @@ def make_wake_figs(x_vec, r_vec, r_index, turbines, flow_field):
         for t in range(num_turbines):
             turbine_radius = turbines[t].get_radius()
             turbine_coords = turbines[t].get_coords()
-            turbines[t]..set_direction(flow_field.get_undisturbed_flow_at_point(turbine_coords, False, True))
+            turbines[t].set_direction(flow_field.get_undisturbed_flow_at_point(turbine_coords, False, True))
             turbine_direction = turbines[t].get_direction()
             turbine_angle = (180 / np.pi) * np.arcsin(turbine_direction[r_index])
             #rel_index = relative_index(origin_coords, turbine_coords, flow_field)
