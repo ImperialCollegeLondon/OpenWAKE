@@ -48,9 +48,7 @@ class BaseWakeCombination(BaseField):
         """
         self.u_j = []
         wakes = wake_field.get_wakes()
-        for w in wakes:
-            self.u_j.append( flow_field.get_undisturbed_flow_at_point(w.get_turbine().get_coords(), False ) )
-        self.u_j = np.array( self.u_j )
+        self.u_j = np.array( [ ( flow_field.get_undisturbed_flow_at_point(w.get_turbine().get_coords(), False ) ) for w in wakes ] )
 
     def set_disturbed_flow_grid(self, disturbed_flow_grid, fine_mesh):
         if fine_mesh == True:
