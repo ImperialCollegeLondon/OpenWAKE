@@ -304,7 +304,7 @@ def plot_wakes_vs_flow_dir(wake_field, wake_combination, turbine_field, flow_fie
         for w in wakes:
             w.is_grid_outdated = True
 
-        wake_fig, wake_axes = make_wake_figs(x_vec, r_vec, r_index, turbines, flow_field)
+        wake_fig, wake_axes = make_wake_figs(x_vec, r_vec, r_index, turbines, flow_field_alpha)
         wake_axes = wake_axes[1]
 
 ##        for t in range(num_turbines):
