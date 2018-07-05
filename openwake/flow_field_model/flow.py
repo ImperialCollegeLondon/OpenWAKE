@@ -160,27 +160,29 @@ class FlowField(object):
         param vrf_func combined or single function returning net velocity
         given the undisturbed flow and the point
         """
+        if self.is_in_flow_field(pnt_coords):
+            
+            flow = self.get_flow()
+            x_coords, y_coords, z_coords = self.get_x_coords(), self.get_y_coords(), self.get_z_coords()
+            x_coord, y_coord, z_coord = pnt_coords
 
-        flow_field = self
-        flow = flow_field.get_flow()
-        x_coords, y_coords, z_coords = self.get_x_coords(), self.get_y_coords(), self.get_z_coords()
-        x_coord, y_coord, z_coord = pnt_coords
+            # Find index of nearest value in an array
+            x_coord_index, y_coord_index, z_coord_index = find_index(x_coords, x_coord),\
+                                                          find_index(y_coords, y_coord),\
+                                                          find_index(z_coords, z_coord)
 
-        # Find index of nearest value in an array
-        x_coord_index, y_coord_index, z_coord_index = find_index(x_coords, x_coord),\
-                                                      find_index(y_coords, y_coord),\
-                                                      find_index(z_coords, z_coord)
-
-        # calculate undisturbed flow at point
-        undisturbed_flow_at_point = np.array(flow[x_coord_index, y_coord_index, z_coord_index], dtype=np.float64)
-        if mag == True:
-            undisturbed_flow_at_point = np.linalg.norm(undisturbed_flow_at_point, 2) if isinstance(undisturbed_flow_at_point, (list, np.ndarray)) else undisturbed_flow_at_point
-        elif direction == True:
-            try:
-                undisturbed_flow_at_point = undisturbed_flow_at_point / np.linalg.norm(undisturbed_flow_at_point, 2)
-            except ZeroDivisionError:
-                undisturbed_flow_at_point = np.array([0,0,0])
-
+            # calculate undisturbed flow at point
+            undisturbed_flow_at_point = np.array(flow[x_coord_index, y_coord_index, z_coord_index], dtype=np.float64)
+            if mag == True:
+                undisturbed_flow_at_point = np.linalg.norm(undisturbed_flow_at_point, 2) if isinstance(undisturbed_flow_at_point, (list, np.ndarray)) else undisturbed_flow_at_point
+            elif direction == True:
+                try:
+                    undisturbed_flow_at_point = undisturbed_flow_at_point / np.linalg.norm(undisturbed_flow_at_point, 2)
+                except ZeroDivisionError:
+                    undisturbed_flow_at_point = np.array([0,0,0])
+        else:
+            undisturbed_flow_at_point = np.array([0, 0, 0])
+        
         return undisturbed_flow_at_point
 
 

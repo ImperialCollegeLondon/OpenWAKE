@@ -73,24 +73,28 @@ class BaseWakeCombination(BaseField):
         function that gets the created disturbed flow mesh of this wake combination, and accesses a particular
         point from that array.
         """
-        wakes = wake_field.get_wakes()
-        # check if disturbed flow grid needs updating
-        if self.is_grid_outdated or (fine_mesh == True and not hasattr(self, 'fine_disturbed_flow_grid')) or (fine_mesh == False and not hasattr(self, 'coarse_disturbed_flow_grid')):
-            self.calc_disturbed_flow_grid(flow_field, wake_field, fine_mesh)
-        
-        disturbed_flow_grid = self.get_disturbed_flow_grid(flow_field, wake_field, fine_mesh)
-        
-        dx, dy, dz = flow_field.get_dx(), flow_field.get_dy(), flow_field.get_dz()
-        rel_x_index, rel_y_index, rel_z_index = int( pnt_coords[0] / dx ), int( pnt_coords[1] / dy ), int( pnt_coords[2] / dz )
-        disturbed_flow_at_point = np.array(disturbed_flow_grid[rel_x_index, rel_y_index, rel_z_index], dtype=np.float64)
+        if flow_field.is_in_flow_field(pnt_coords):
+            wakes = wake_field.get_wakes()
+            # check if disturbed flow grid needs updating
+            if self.is_grid_outdated or (fine_mesh == True and not hasattr(self, 'fine_disturbed_flow_grid')) or (fine_mesh == False and not hasattr(self, 'coarse_disturbed_flow_grid')):
+                self.calc_disturbed_flow_grid(flow_field, wake_field, fine_mesh)
+            
+            disturbed_flow_grid = self.get_disturbed_flow_grid(flow_field, wake_field, fine_mesh)
+            
+            dx, dy, dz = flow_field.get_dx(), flow_field.get_dy(), flow_field.get_dz()
+            rel_x_index, rel_y_index, rel_z_index = int( pnt_coords[0] / dx ), int( pnt_coords[1] / dy ), int( pnt_coords[2] / dz )
+            disturbed_flow_at_point = np.array(disturbed_flow_grid[rel_x_index, rel_y_index, rel_z_index], dtype=np.float64)
 
-        if mag == True:
-            disturbed_flow_at_point = np.linalg.norm(disturbed_flow_at_point, 2) if isinstance(disturbed_flow_at_point, (list, np.ndarray)) else disturbed_flow_at_point
-        elif direction == True:
-            try:
-                disturbed_flow_at_point = disturbed_flow_at_point / np.linalg.norm(disturbed_flow_at_point, 2)
-            except ZeroDivisionError:
-                disturbed_flow_at_point = np.array([0,0,0])
+            if mag == True:
+                disturbed_flow_at_point = np.linalg.norm(disturbed_flow_at_point, 2) if isinstance(disturbed_flow_at_point, (list, np.ndarray)) else disturbed_flow_at_point
+            elif direction == True:
+                try:
+                    disturbed_flow_at_point = disturbed_flow_at_point / np.linalg.norm(disturbed_flow_at_point, 2)
+                except ZeroDivisionError:
+                    disturbed_flow_at_point = np.array([0,0,0])
+
+        else:
+            disturbed_flow_at_point = np.array([0, 0, 0])
 
         return disturbed_flow_at_point
 
@@ -163,8 +167,8 @@ class BaseWakeCombination(BaseField):
                     turbine = w.get_turbine()
                     turbine_direction = turbine.get_direction()
                     turbine_coords = turbine.get_coords()
-                    turbine_y_angle = np.arcsin(turbine_direction[1] / turbine_direction[0] )
-                    turbine_z_angle = np.arcsin(turbine_direction[2] / turbine_direction[0] )
+                    turbine_y_angle = np.arcsin(turbine_direction[1])
+                    turbine_z_angle = np.arcsin(turbine_direction[2])
                     end_y_index, end_z_index = find_index( y_coords, turbine_coords[1] + ( y_increment * wake_radius * np.cos(turbine_y_angle) )),\
                                                find_index( z_coords, turbine_coords[2] + ( z_increment * wake_radius * np.cos(turbine_z_angle) ))
 
@@ -177,7 +181,7 @@ class BaseWakeCombination(BaseField):
                     #if y_index <= end_y_index and y_index >= 0:
 
                     for j in range(start_y_index, end_y_index + 1, y_increment):
-                        
+                        #print(j, start_y_index, turbine_y_angle)
                         y = y_coords[j]
 
                         if not end_y_dash_reached:
