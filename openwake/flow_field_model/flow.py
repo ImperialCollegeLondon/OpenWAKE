@@ -30,103 +30,56 @@ class FlowField(object):
         except AssertionError:
             raise ValueError("'x_coords must be the same length as 'y_coords' and 'z_coords'. The shape of 'flow' should be (len(x_coords), len(y_coords), len(z_coords), 3)")
         else:
-            self.set_x_coords(x_coords)
-            self.set_y_coords(y_coords)
-            self.set_z_coords(z_coords)
+            self.set_coords(x_coords, y_coords, z_coords)
             self.set_flow(flow)
-
-    def get_x_coords(self):
-        return self.x_coords
-
-    def get_y_coords(self):
-        return self.y_coords
-
-    def get_z_coords(self):
-        return self.z_coords
 
     def get_flow(self):
         return self.flow
 
-    def set_dx(self, dx):
-        self.dx = dx
-
-    def set_dy(self, dy):
-        self.dy = dy
-
-    def set_dz(self, dz):
-        self.dz = dz
-
-    def get_dx(self):
-        return self.dx
-
-    def get_dy(self):
-        return self.dy
-
-    def get_dz(self):
-        return self.dz
+    def set_diff(self, dx, dy, dz):
+        self.diff = dx, dy, dz
+        
+    def get_diff(self):
+        return self.diff
 
     def is_in_flow_field(self, pnt_coords):
-        return any(np.isin(self.get_x_coords(), pnt_coords[0])) \
-               and any(np.isin(self.get_y_coords(), pnt_coords[1])) \
-               and any(np.isin(self.get_z_coords(), pnt_coords[2])) 
+        diff = self.get_diff()
+        len_x = len_y = len_z = self.get_coords().shape[1]
+        rel_x_index, rel_y_index, rel_z_index = relative_index([0,0,0], pnt_coords, diff)
+        return rel_x_index in range(len_x) and rel_y_index in range(len_y) and rel_z_index in range(len_z)
     
-    def set_x_coords(self, x_coords = []):
+    def set_coords(self, x_coords = [], y_coords = [], z_coords = []):
         try:
             assert isinstance(x_coords, (list, np.ndarray))
-            assert all(isinstance(c, (float,int)) for c in x_coords)
-        except AssertionError:
-            raise TypeError("'x_coords' must be of type 'list', where each element is of type 'int' or 'float'")
-        else:
-            if len(x_coords) > 1:
-                dx_arr = np.diff(x_coords)
-                dx = dx_arr.min()
-                self.set_dx(dx)
-                # if dx is not always equal and monotonoically increasing, interpolate in order
-                if not all(d == dx_arr[0] for d in dx_arr) or any(dx_arr < 0):
-                    x_coords = np.arange(min(x_coords), max(x_coords) + dy, dx).tolist()
-            else:
-                self.set_dx(1)
-            
-            self.x_coords =  np.array(x_coords, dtype=np.float64)
-
-    def set_y_coords(self, y_coords = []):
-        try:
             assert isinstance(y_coords, (list, np.ndarray))
-            assert all(isinstance(c, (float,int)) for c in y_coords)
-        except AssertionError:
-            raise TypeError("'y_coords' must be of type 'list', where each element is of type 'int' or 'float'")
-        else:
-            if len(y_coords) > 1:
-                dy_arr = np.diff(y_coords)
-                dy = dy_arr.min() if len(dy_arr) > 1 else 0
-                self.set_dy(dy)
-                # if dy is not always equal and monotonoically increasing, interpolate in order
-                if not all(d == dy_arr[0] for d in dy_arr) or any(dy_arr < 0):
-                    y_coords = np.arange(min(y_coords), max(y_coords) + dy, dy).tolist()
-            else:
-                self.set_dy(1)
-            
-            self.y_coords =  np.array(y_coords, dtype=np.float64)
-
-    def set_z_coords(self, z_coords = []):
-        default_z_coords = []
-        try:
             assert isinstance(z_coords, (list, np.ndarray))
+            assert all(isinstance(c, (float,int)) for c in x_coords)
+            assert all(isinstance(c, (float,int)) for c in y_coords)
             assert all(isinstance(c, (float,int)) for c in z_coords)
         except AssertionError:
-            raise TypeError("'z_coords' must be of type 'list', where each element is of type 'int' or 'float'")
+            raise TypeError("'coords' must be of type 'list', where each element is of type 'int' or 'float'")
         else:
-            if len(z_coords) > 1:
-                dz_arr = np.diff(z_coords)
-                dz = dz_arr.min() if len(dz_arr) > 1 else 0
-                self.set_dz(dz)
-                # if dz is not always equal and monotonoically increasing, interpolate in order
+            if len(x_coords) > 1 and len(y_coords) > 1 and len(z_coords) > 1:
+                dx_arr, dy_arr, dz_arr = np.diff(x_coords), np.diff(y_coords), np.diff(z_coords)
+                dx, dy, dz = dx_arr.min(), dy_arr.min(), dz_arr.min()
+                self.set_diff( dx, dy, dz )
+                # if diff is not always equal and monotonoically increasing, interpolate in order
+                if not all(d == dx_arr[0] for d in dx_arr) or any(dx_arr < 0):
+                    x_coords = np.arange( min(x_coords), max(x_coords) + dx, dx).tolist()
+                
+                if not all(d == dy_arr[0] for d in dy_arr) or any(dy_arr < 0):
+                    y_coords = np.arange(min(y_coords), max(y_coords) + dy, dy).tolist()
+
                 if not all(d == dz_arr[0] for d in dz_arr) or any(dz_arr < 0):
                     z_coords = np.arange(min(z_coords), max(z_coords) + dz, dz).tolist()
+                    
             else:
-                self.set_dz(1)
-                
-            self.z_coords =  np.array(z_coords, dtype=np.float64)
+                self.set_diff(1, 1, 1)
+            
+            self.coords =  np.array([x_coords, y_coords, z_coords], dtype=np.float64)
+
+    def get_coords(self):
+        return self.coords
 
     def set_flow(self, flow = [0,0,0]):
         #flow_mg = np.meshgrid(flow)
@@ -163,7 +116,7 @@ class FlowField(object):
         if self.is_in_flow_field(pnt_coords):
             
             flow = self.get_flow()
-            x_coords, y_coords, z_coords = self.get_x_coords(), self.get_y_coords(), self.get_z_coords()
+            x_coords, y_coords, z_coords = self.get_coords()
             x_coord, y_coord, z_coord = pnt_coords
 
             # Find index of nearest value in an array

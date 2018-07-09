@@ -9,7 +9,7 @@ from turbine_models.turbine_field import TurbineField
 class BaseTurbine(object):
     """ Implements base turbine class."""
 
-    def __init__(self, radius=10, coords=[0,0,0], top_clearance=np.inf, direction=[-1,0,0], thrust_coefficient_curve=[[],[]], power_coefficient_curve=[[],[]], turbine_field = TurbineField()):
+    def __init__(self, radius = 10, coords = [ 0,0,0 ], top_clearance = np.inf, direction = [ -1, 0, 0 ], thrust_coefficient_curve = [ [], [] ], power_coefficient_curve=[ [], [] ], turbine_field = TurbineField() ):
         """ 
         param radius is radius of turbine blades param hub_height is distance from floor to hub
         param coords is a list of x,y,z coordinates, where z is the distance from sea level in the
@@ -29,36 +29,41 @@ class BaseTurbine(object):
         self.set_turbine_field(turbine_field)
         
     def get_radius(self):
+        """ getter for tubine radius """
         return self.radius
     
     def get_coords(self):
+        """ getter for tubine coordinates """
         return self.coords
 
     def get_top_clearance(self):
+        """ getter for tubine top clearance """
         return self.top_clearance
 
     def get_direction(self):
+        """ getter for tubine direction """
         return self.direction
 
     def get_thrust_coefficient_curve(self):
+        """ getter for tubine thrust coefficient curve """
         return self.thrust_coefficient_curve
 
     def get_power_coefficient_curve(self):
+        """ getter for tubine power coefficient curve """
         return self.power_coefficient_curve
 
     def get_turbine_field(self):
+        """ getter for tubine turbine_field object """
         return self.turbine_field
 
     def calc_thrust_coefficient(self, flow_mag_at_turbine):
-
-        #turbine_direction = self.get_direction()
-        turbine_coords = self.get_coords()
-        #normalised_turbine_direction = turbine_direction/np.linalg.norm(turbine_direction,2)
-        #u = np.dot(flow_at_turbine, normalised_turbine_direction)
-
-        #u = np.linalg.norm(flow_at_turbine,2)
-        
+        """ returns the thrust coefficient of the turbine for
+            the given flow magnitude
+            param flow_mag_at_turbine magnitude of flow incident to turbine surface area
+        """
+        turbine_coords = self.get_coords()        
         curve = self.get_thrust_coefficient_curve()
+        
         # flow speed data points
         xp = curve[0]
 
@@ -66,33 +71,39 @@ class BaseTurbine(object):
         fp = curve[1]
         
         # check if xp is always increasing and lengths are equal
-        if not (np.all(np.diff(xp) > 0) and len(xp) == len(fp)):
+        try:
+            assert np.all( np.diff( xp ) > 0 )
+            assert len( xp ) == len( fp )
+        except AssertionError:
             raise ValueError("Values of fluid speed (first row of thrustCoefficient) should be in increasing order")
         else:
-            return np.interp(flow_mag_at_turbine, xp, fp)
+            return np.interp( flow_mag_at_turbine, xp, fp )
 
     def calc_power_coefficient(self, flow_mag_at_turbine):
-        turbine_direction = self.get_direction()
+        """ returns the power coefficient of the turbine for
+            the given flow magnitude
+            param flow_mag_at_turbine magnitude of flow incident to turbine surface area
+        """
+
         turbine_coords = self.get_coords()
-
-        #normalised_turbine_direction = turbine_direction/np.linalg.norm(turbine_direction,2)
-        #u = np.dot(flow_at_turbine, normalised_turbine_direction)
-
-        #u = np.linalg.norm(flow_at_turbine,2)
         
         curve = self.get_power_coefficient_curve()
+        
         # flow speed data points
         xp = curve[0]
         # thrust coefficient data points
         fp = curve[1]
 
         # check if xp is always increasing and lengths are equal
-        if not (np.all(np.diff(xp) > 0) and len(xp) == len(fp)):
+        try:
+            assert np.all( np.diff( xp ) > 0 )
+            assert len( xp ) == len( fp )
+        except AssertionError:
             raise ValueError("Values of fluid speed (first row of powerCoefficient) should be in increasing order")
         else:
-            return np.interp(flow_mag_at_turbine, xp, fp)
+            return np.interp( flow_mag_at_turbine, xp, fp )
 
-    def calc_area(self):
+    def calc_area( self ):
         return np.pi * self.get_radius()*2
      
     def set_radius(self, radius):

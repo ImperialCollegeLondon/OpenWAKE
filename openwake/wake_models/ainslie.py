@@ -95,7 +95,6 @@ class Ainslie(BaseWake):
         np.append(self.centreline_vdf, D_m)
 
     def get_centreline_vdf(self, turbine_coords, rel_pnt_coords, flow_field):
-        #rel_x_index, rel_y_index, rel_z_index = relative_index(turbine_coords, pnt_coords, flow_field)
         dx = self.calc_rel_frame(flow_field)[1]
         rel_x_index = int( rel_pnt_coords[0] / dx )
         return self.centreline_vdf[rel_x_index]
@@ -128,7 +127,7 @@ class Ainslie(BaseWake):
         turbine_radius = turbine.get_radius()
         turbine_diameter = 2 * turbine_radius
         flow_field = self.get_flow_field()
-        x_coords, y_coords, z_coords = flow_field.get_x_coords(), flow_field.get_y_coords(), flow_field.get_z_coords()
+        x_coords, y_coords, z_coords = flow_field.get_coords()
         turbine_coords = turbine.get_coords()
         u_0 = flow_field.get_undisturbed_flow_at_point(turbine_coords, True)
         v_0 = 0
@@ -136,8 +135,9 @@ class Ainslie(BaseWake):
         u_0 = flow_field.get_undisturbed_flow_at_point(turbine_coords, True)
         thrust_coefficient = turbine.calc_thrust_coefficient(u_0)
         ambient_intensity = self.get_ambient_intensity()
+        dx = dr = min( flow_field.get_diff() )
+        max_len = 10 * turbine_radius
         
-        max_len, dx, dr = self.calc_rel_frame(flow_field)
         multiplier_grid = np.ones((max_len, max_len, 2))
         
         # Dimensionless constant
