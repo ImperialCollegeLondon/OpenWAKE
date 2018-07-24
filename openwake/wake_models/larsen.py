@@ -100,7 +100,6 @@ class Larsen(BaseWake):
         turbine_diameter = 2 * turbine_radius
         hub_height = turbine_coords[2]
         ambient_intensity = self.get_ambient_intensity()
-        #x_rel = relative_position(turbine_coords, pnt_coords, flow_field)[0]
         x_rel = rel_pnt_coords[0]
         prandtl_mixing = self.calc_prandtl_mixing(thrust_coefficient, turbine_diameter, rotor_disc_area, hub_height, ambient_intensity)
         x_0 = self.calc_x_0(thrust_coefficient, turbine_diameter, hub_height, ambient_intensity)

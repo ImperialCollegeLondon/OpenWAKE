@@ -38,8 +38,8 @@ class Jensen(BaseWake):
     def calc_vrf_at_point(self, rel_pnt_coords, turbine_coords, flow_field, turbine_radius, thrust_coefficient, u_0):
         if self.is_in_wake(rel_pnt_coords, turbine_coords, turbine_radius, thrust_coefficient, flow_field):
             wake_decay = self.get_wake_decay()
-            #x_rel, y_rel, z_rel = relative_position(turbine_coords, pnt_coords, flow_field)
             x_rel = rel_pnt_coords[0]
-            return (1 - thrust_coefficient)**0.5/((1 + (wake_decay * x_rel / turbine_radius))**2)
+            vrf = (1 - thrust_coefficient)**0.5/((1 + (wake_decay * x_rel / turbine_radius))**2)
         else:
-            return 0
+            vrf =  0
+        return vrf
