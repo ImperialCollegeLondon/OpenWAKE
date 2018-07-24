@@ -14,33 +14,25 @@ class LinearSuperposition(BaseWakeCombination):
     def __init__(self, flow_field, wake_field):
         super(LinearSuperposition, self).__init__(flow_field, wake_field)
 
-    def calc_combination_speed_at_point(self, pnt_coords, flow_field, u_j, u_ij, mag):
-        """
-        Combines a number of wakes to give a single flow speed at a turbine.
-
-        .. math:: \sum_j \left( 1 - \frac{u_{ij}}{u_j}\right)
-
-        See Renkema, D. [2007] section 4.8.1.
-
-        Returns total velocity reduction factor at point i as calculated by linear superposition method
-        """
+    def calc_combined_multiplier_at_point( self, pnt_index, flow_field, coords, lengths, wakes ):
         
-        wake_freestream_velocity_ratio = self.calc_velocity_ratio(u_j, u_ij)
+        # get multipliers of all upstream turbines. TODO aargs being reduced to single element
+        len_x, len_y, len_z = lengths
+        
+        i, j, k = int( pnt_index / ( len_z * len_y ) ), \
+                  int( ( pnt_index % ( len_z * len_y ) ) / len_z ), \
+                  int( pnt_index % len_z )
 
-        # subtract ratio from one for each element corresponding to turbine j,
-        # and sum linearly
-        linear_sum = np.sum((1 - wake_freestream_velocity_ratio), axis = 0)
-        #TODO linear_sum sometimes greater than one, wake_freestream_velocity_ratio negative?
-
-        undisturbed_flow_at_point = flow_field.get_undisturbed_flow_at_point(pnt_coords, False)
-        undisturbed_flow_mag_at_point = np.linalg.norm(undisturbed_flow_at_point, 2)
-        undisturbed_flow_dir_at_point = undisturbed_flow_at_point / undisturbed_flow_mag_at_point
-
-        if mag == True:
-            if linear_sum != 0:
-                return np.linalg.norm((1 - linear_sum), 2, 1) * undisturbed_flow_mag_at_point
-            else:
-                return undisturbed_flow_mag_at_point
-        else:
-            return np.array(undisturbed_flow_dir_at_point * (1 - linear_sum) * undisturbed_flow_mag_at_point)
-                
+        x, y, z = coords[0][i], coords[1][j], coords[2][k]
+        pnt_coords = np.array( [ x, y, z ] )
+        wake_multipliers = np.array( [ w.get_multiplier_at_point( pnt_coords, flow_field, w.get_turbine() ) for w in wakes ] )
+        
+##        undisturbed_flow_at_point = flow_field.get_undisturbed_flow_at_point(pnt_coords, False)
+##        undisturbed_flow_mag_at_point = np.linalg.norm(undisturbed_flow_at_point, 2)
+##        undisturbed_flow_dir_at_point = undisturbed_flow_at_point / undisturbed_flow_mag_at_point
+        
+        combined_multiplier = 1 - np.sum( 1 - wake_multipliers )
+        if x == 30 and y == 25 and z == 15:
+            print(combined_multiplier)
+        #np.multiply( ( 1 - np.sum( 1 - wake_multipliers ) ), undisturbed_flow_dir_at_point )
+        return combined_multiplier

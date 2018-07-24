@@ -42,6 +42,10 @@ class FlowField(object):
     def get_diff(self):
         return self.diff
 
+    def get_lengths(self):
+        coords = self.get_coords()
+        return coords[0].shape[0], coords[1].shape[0], coords[2].shape[0]
+
     def is_in_flow_field(self, pnt_coords):
         diff = self.get_diff()
         len_x = len_y = len_z = self.get_coords().shape[1]

@@ -8,16 +8,16 @@ from flow_field_model.flow import FlowField
 import numpy as np
 from helpers import *
 
-class BaseWake(BaseField):
+class BaseWake( BaseField ):
     """A base class from which wake models may be derived."""
 
-    def __init__(self, turbine, flow_field = FlowField(), wake_field = WakeField()):
-        super(BaseWake, self).__init__(flow_field, wake_field)
-        self.set_turbine(turbine)
-        self.wake_field.add_wakes([self])
-        self.calc_multiplier_grid(flow_field)
+    def __init__( self, turbine, flow_field = FlowField(), wake_field = WakeField() ):
+        super( BaseWake, self ).__init__( flow_field, wake_field )
+        self.set_turbine( turbine )
+        self.wake_field.add_wakes( [ self ] )
+        self.calc_multiplier_grid( flow_field )
 
-    def is_in_wake(self, rel_pnt_coords, turbine_coords, turbine_radius, thrust_coefficient, flow_field):
+    def is_in_wake( self, rel_pnt_coords, turbine_coords, turbine_radius, thrust_coefficient, flow_field ):
 
         """
         Returns True if point is in wake.
@@ -30,11 +30,11 @@ class BaseWake(BaseField):
             return False
         else:
             
-            wake_radius = self.calc_wake_radius(rel_pnt_coords, turbine_coords, flow_field, turbine_radius, thrust_coefficient)
-            r_rel = np.linalg.norm([y_rel, z_rel], 2)
+            wake_radius = self.calc_wake_radius( rel_pnt_coords, turbine_coords, flow_field, turbine_radius, thrust_coefficient )
+            r_rel = np.linalg.norm( [ y_rel, z_rel ], 2 )
             return wake_radius > r_rel# and 5 * turbine_radius > r_rel
 
-    def get_multiplier_grid(self):
+    def get_multiplier_grid( self ):
         try:
             self.multiplier_grid
         except AttributeError:
@@ -46,59 +46,27 @@ class BaseWake(BaseField):
         self.multiplier_grid = multiplier_grid
         self.set_grid_outdated( False )
 
-    def get_disturbed_flow_at_point(self, pnt_coords, flow_field, mag = False, direction = False):
-        """
-        function that gets the created disturbed flow mesh of this wake combination, and accesses a particular
-        point from that array.
-        """
-    
-        if flow_field.is_in_flow_field(pnt_coords):
-            turbine = self.get_turbine()
-            turbine_coords = turbine.get_coords()
-            turbine_radius = turbine.get_radius()
-            turbine_direction = turbine.get_direction()
-            dx = dr = min( flow_field.get_diff() )
-            num_coords = flow_field.get_coords().shape[1]
-            u_0 = flow_field.get_undisturbed_flow_at_point(turbine_coords, True)
-            thrust_coefficient = turbine.calc_thrust_coefficient(u_0)
-
-            # check if disturbed flow grid needs updating
-            if self.is_grid_outdated:
-                self.calc_multiplier_grid( flow_field )
-
-            multiplier_grid = self.get_multiplier_grid()
-            origin_coords = np.array([0,0,0])
-            x_coords, y_coords, z_coords = flow_field.get_coords()
-            rel_pnt_coords = relative_position( turbine_coords, pnt_coords, turbine_direction, True )
+    def get_multiplier_at_point( self, pnt_coords, flow_field, turbine ):
         
-            if self.is_in_wake( rel_pnt_coords, turbine_coords, turbine_radius, thrust_coefficient, flow_field ):
-                x_index = int( rel_pnt_coords[0] / dx )
-                r_index = int( np.linalg.norm( rel_pnt_coords[1:], 2) / dr )
-                disturbed_flow_at_point = flow_field.get_undisturbed_flow_at_point( pnt_coords, False ) * multiplier_grid[x_index, r_index]
-            else:
-                disturbed_flow_at_point = flow_field.get_undisturbed_flow_at_point( pnt_coords, False )
-
+        turbine = self.get_turbine()
+        turbine_coords = turbine.get_coords()
+        turbine_radius = turbine.get_radius()
+        turbine_direction = turbine.get_direction()
+        dx = dr = min( flow_field.get_diff() )
+        num_coords = flow_field.get_coords().shape[1]
+        u_0 = flow_field.get_undisturbed_flow_at_point( turbine_coords, True )
+        thrust_coefficient = turbine.calc_thrust_coefficient( u_0 )
+        
+        rel_pnt_coords = relative_position( turbine_coords, pnt_coords, turbine_direction, True )
+        
+        if self.is_in_wake( rel_pnt_coords, turbine_coords, turbine_radius, thrust_coefficient, flow_field ):
+            x_index = int( rel_pnt_coords[0] / dx )
+            r_index = int( np.linalg.norm( rel_pnt_coords[1:], 2) / dr )
+            multiplier = self.get_multiplier_grid()[ x_index, r_index ]
         else:
-            disturbed_flow_at_point = np.array([0, 0, 0])
-
-        if mag == True:
-            disturbed_flow_at_point = np.linalg.norm(disturbed_flow_at_point, 2) if isinstance(disturbed_flow_at_point, (list, np.ndarray)) else disturbed_flow_at_point
-        elif direction == True:
-            try:
-                disturbed_flow_at_point = disturbed_flow_at_point / np.linalg.norm(disturbed_flow_at_point, 2)
-            except ZeroDivisionError:
-                disturbed_flow_at_point = np.array([0,0,0])
-
-        return disturbed_flow_at_point
-
-    def calc_rel_frame(self, turbine_radius, num_coords, diff ):
-
-        len_x = len_y = len_z = num_coords
-        # maximum possible length is where turbine is located at corner and facing opposite corner
-        length = int( min( 10 * turbine_radius, ( 2 * max([len_x, len_y, len_z])**2 )**0.5 ) )
-        # dx and dr should allow for finest difference in absolute coordinate system
-        dx = dr = min( diff )
-        return length, dx, dr
+            multiplier = 1
+        
+        return multiplier
 
     def calc_multiplier_grid( self, flow_field ):
         """
