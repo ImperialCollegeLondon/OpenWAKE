@@ -12,6 +12,7 @@
 from floris.coordinate import Coordinate
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 class VisualizationManager():
     """
@@ -23,10 +24,11 @@ class VisualizationManager():
     only one instance of this class should exist.
     """
 
-    def __init__(self, flowfield, name, grid_resolution=(100, 100, 25)):
+    def __init__(self, flowfield, name, plot_wakes, grid_resolution=(100, 100, 25)):
         self.figure_count = 0
         self.flowfield = flowfield
         self.name = name
+        self.plot_wakes = plot_wakes
         self.grid_resolution = Coordinate(grid_resolution[0], grid_resolution[1], grid_resolution[2])
         self._initialize_flowfield_for_plotting()
 
@@ -71,7 +73,11 @@ class VisualizationManager():
         self.flowfield.u_field = self.flowfield._initial_flowfield()
         for turbine in self.flowfield.turbine_map.turbines:
             turbine.plotting = True
-        self.flowfield.calculate_wake()
+        if self.plot_wakes:
+            self.flowfield.calculate_wake()
+            self.u_field = self.flowfield.u_field
+        else:
+            self.u_field = np.ones(self.flowfield.x.shape)
 
     def _discretize_freestream_domain(self):
         """
@@ -115,11 +121,14 @@ class VisualizationManager():
             ymesh, zmesh, data, "x plane", "y (m)", "z (m)")
 
     def _add_z_plane(self, percent_height=0.5):
+        
         plane = int(self.flowfield.grid_resolution.z * percent_height)
+        
         self._plot_constant_z(
             self.flowfield.x[:, :, plane],
             self.flowfield.y[:, :, plane],
-            self.flowfield.u_field[:, :, plane])
+            self.u_field[:, :, plane])
+        
         for coord, turbine in self.flowfield.turbine_map.items():
             self._add_turbine_marker(
                 turbine, coord, self.flowfield.wind_direction)
@@ -129,35 +138,62 @@ class VisualizationManager():
         self._plot_constant_y(
             self.flowfield.x[:, plane, :],
             self.flowfield.z[:, plane, :],
-            self.flowfield.u_field[:, plane, :])
+            self.u_field[:, plane, :])
 
     def _add_x_plane(self, percent_height=0.5):
         plane = int(self.flowfield.grid_resolution.x * percent_height)
         self._plot_constant_x(
             self.flowfield.y[plane, :, :],
             self.flowfield.z[plane, :, :],
-            self.flowfield.u_field[plane, :, :])
+            self.u_field[plane, :, :])
 
     def plot_z_planes(self, planes):
         for p in planes:
             self._add_z_plane(p)
+        
+        if self.plot_wakes:
+            file_path = '../examples/results/{}/{}_{}'.format(self.name, self.name,'zplane')
+            if not os.path.exists(os.path.dirname(file_path)):
+                try:
+                    os.makedirs(os.path.dirname(file_path))
+                except OSError as exc: # Guard against race condition
+                    if exc.errno != errno.EEXIST:
+                        raise
+            plt.savefig(file_path, dpi='figure')
         self.show()
-        path = '../results/{}_{}'.format(self.name,'zplane')
-        plt.savefig(path)
 
     def plot_y_planes(self, planes):
         for p in planes:
             self._add_y_plane(p)
+        
+        if self.plot_wakes:
+            file_path = '../examples/results/{}/{}_{}'.format(self.name, self.name,'yplane')
+            if not os.path.exists(os.path.dirname(file_path)):
+                try:
+                    os.makedirs(os.path.dirname(file_path))
+                except OSError as exc: # Guard against race condition
+                    if exc.errno != errno.EEXIST:
+                        raise
+            plt.savefig(file_path, dpi='figure')
+            
         self.show()
-        path = '../results/{}_{}'.format(self.name,'yplane')
-        plt.savefig(path)
 
     def plot_x_planes(self, planes):
         for p in planes:
             self._add_x_plane(p)
+                    
+        if self.plot_wakes:
+    
+            file_path = '../examples/results/{}/{}_{}'.format(self.name, self.name,'xplane')
+            if not os.path.exists(os.path.dirname(file_path)):
+                try:
+                    os.makedirs(os.path.dirname(file_path))
+                except OSError as exc: # Guard against race condition
+                    if exc.errno != errno.EEXIST:
+                        raise
+                        
+            plt.savefig(file_path, dpi='figure')
         self.show()
-        path = '../results/{}_{}'.format(self.name,'xplane')
-        plt.savefig(path)
         
     def show(self):
         plt.show()
