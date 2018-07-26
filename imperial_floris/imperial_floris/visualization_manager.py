@@ -106,6 +106,7 @@ class VisualizationManager():
         b = Coordinate(coords.x, coords.y + turbine.rotor_radius)
         a.rotate_z(turbine.yaw_angle - wind_direction, coords.as_tuple())
         b.rotate_z(turbine.yaw_angle - wind_direction, coords.as_tuple())
+        
         plt.plot([a.xprime, b.xprime], [a.yprime, b.yprime], 'k', linewidth=1)
 
     def _plot_constant_z(self, xmesh, ymesh, data):

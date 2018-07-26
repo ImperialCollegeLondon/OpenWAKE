@@ -26,6 +26,17 @@ import time
 
 #warnings.simplefilter('ignore', RuntimeWarning)
 
+def print_evolution(floris, evolution_name, evolution_data, evolution_variables, num_plots):
+    num_iterations = len(evolution_data[1])
+    num_plots = int(min(num_plots, num_iterations))
+    increment = np.int(num_iterations / num_plots)
+    for i in range(0, num_iterations, increment):
+        floris_viz = set_iteration_data(evolution_data[3][i], floris, evolution_variables)
+        flow_field_viz = floris_viz.farm.flow_field
+        visualization_manager = VisualizationManager(flow_field_viz, evolution_name, plot_wakes=False)
+        print('Iteration #{}, Power Output = {} MW'.format(i, evolution_data[2][i]))
+        visualization_manager.plot_z_planes([0.5])
+
 def print_output(floris, data, new_params, init_power, new_power, variables, num_turbines, is_opt, plot_wakes=True, name=None, time_diff=None):
     
     num_params = len(new_params)
@@ -47,10 +58,11 @@ def print_output(floris, data, new_params, init_power, new_power, variables, num
 
         plt.savefig(file_path)
     
+    coords = floris.farm.flow_field.turbine_map.coords
     state = 'Optimised' if is_opt else 'Intermediate'
     print(state, ' Parameters:')
     for p, param in enumerate(new_params):
-        msgs.append('Turbine {} parameter {} = {}'.format(p % num_turbines, variables[int(p / num_turbines)], param))
+        msgs.append('Turbine {} parameter {} = {}'.format(coords[p % num_turbines], variables[int(p / num_turbines)], param))
     
     msgs.append('Initial Power Output = {} MW'.format(init_power/10**6))
     msgs.append('{}, Power Output = {} MW'.format(state, new_power/10**6))
@@ -68,6 +80,7 @@ def print_output(floris, data, new_params, init_power, new_power, variables, num
     visualization_manager = VisualizationManager(flow_field_viz, name, plot_wakes)
     visualization_manager.plot_z_planes([0.5])
     visualization_manager.plot_x_planes([0.5])
+    visualization_manager.plot_y_planes([0.5])
 
     with open('../examples/results/{}/{}_{}.csv'.format(name, name, 'solution_data'), 'w') as csv_file:
         writer = csv.writer(csv_file)
@@ -220,6 +233,8 @@ def optimise_func(floris, variables, minimum_values, maximum_values, name, case,
         print('No change in controls suggested for this inflow condition...')
 
     opt_params, opt_power = residual_plant.x, -residual_plant.fun
+    
+    floris = set_iteration_data(opt_params, floris, variables)
     
     t2 = time.time()
     time_diff = t2 - t1
