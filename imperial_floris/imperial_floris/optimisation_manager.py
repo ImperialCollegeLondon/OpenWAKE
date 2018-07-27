@@ -30,11 +30,12 @@ def print_evolution(floris, evolution_name, evolution_data, evolution_variables,
     num_iterations = len(evolution_data[1])
     num_plots = int(min(num_plots, num_iterations))
     increment = np.int(num_iterations / num_plots)
+    
     for i in range(0, num_iterations, increment):
         floris_viz = set_iteration_data(evolution_data[3][i], floris, evolution_variables)
         flow_field_viz = floris_viz.farm.flow_field
         visualization_manager = VisualizationManager(flow_field_viz, evolution_name, plot_wakes=False)
-        print('Iteration #{}, Power Output = {} MW'.format(i, evolution_data[2][i]))
+        print('Iteration #{}, Total Power Output = {} MW'.format(i, evolution_data[2][i]))
         visualization_manager.plot_z_planes([0.5])
 
 def print_output(floris, data, new_params, init_power, new_power, variables, num_turbines, is_opt, plot_wakes=True, name=None, time_diff=None):
@@ -59,10 +60,14 @@ def print_output(floris, data, new_params, init_power, new_power, variables, num
         plt.savefig(file_path)
     
     coords = floris.farm.flow_field.turbine_map.coords
+    turbines = floris.farm.flow_field.turbine_map.turbines
     state = 'Optimised' if is_opt else 'Intermediate'
     print(state, ' Parameters:')
     for p, param in enumerate(new_params):
         msgs.append('Turbine {} parameter {} = {}'.format(coords[p % num_turbines], variables[int(p / num_turbines)], param))
+    
+    for t in range(num_turbines):
+        msgs.append('Turbine {} Power Output = {} MW'.format(coords[t], turbines[t].power))
     
     msgs.append('Initial Power Output = {} MW'.format(init_power/10**6))
     msgs.append('{}, Power Output = {} MW'.format(state, new_power/10**6))
@@ -122,14 +127,15 @@ def set_iteration_data(x, floris, variables):
     
 def calc_power(floris):
     turbines    = [turbine for _, turbine in floris.farm.flow_field.turbine_map.items()]
-    return np.sum([turbine.power for turbine in turbines])
+    turbines_power = [turbine.power for turbine in turbines]
+    return turbines_power, np.sum(turbines_power)
 
 def power_objective_func(x, floris, variables, data):
     
     floris = set_iteration_data(x, floris, variables)
     
     floris.farm.flow_field.calculate_wake()
-    power = -calc_power(floris)
+    power = -calc_power(floris)[1]
     
     # data[0] is a row containing headers, data[1][i] contains iteration number i, data[2][i] contains power output at iteration i
     # data[3][i] contains solution x at iteration i, data[4] on contain print strings 
@@ -147,7 +153,7 @@ def optimise_func(floris, variables, minimum_values, maximum_values, name, case,
     t1 = time.time()
     
     turbines = [turbine for _, turbine in floris.farm.flow_field.turbine_map.items()]
-    init_power = calc_power(floris)
+    init_power = calc_power(floris)[1]
     num_turbines, num_variables =  len(turbines), len(variables)
     x0, bnds = [], []
     data = [['Iteration Number', 'Power Output'],[0],[init_power/(10**6)]]
@@ -220,11 +226,12 @@ def optimise_func(floris, variables, minimum_values, maximum_values, name, case,
     
     minimizer_kwargs = {'args':(floris, variables, data), 'method': 'SLSQP',\
                         'bounds':bnds, \
-                        'options':{'disp':True}}#'constraints':ineq_constr, unneccessary
+                        'options':{'disp':True}}#, 'constraints':ineq_constr}#, unneccessary,
     
     # TODO could also 'basin-hop' intelligently by choosing areas of high flow
     if global_search:
-        residual_plant = basinhopping(power_objective_func, x0, minimizer_kwargs=minimizer_kwargs, disp=True)
+        residual_plant = basinhopping(power_objective_func, x0, minimizer_kwargs=minimizer_kwargs, niter_success=25, disp=True)
+        # try method=’L-BFGS-B’
     else:
         residual_plant = minimize(power_objective_func, x0, args=(floris, variables, data), \
                                   method='SLSQP', bounds=bnds)#constraints=ineq_constr
