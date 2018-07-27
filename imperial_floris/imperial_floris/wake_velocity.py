@@ -188,15 +188,15 @@ class WakeVelocity():
         delta = deflection_field
         
         # initial velocity deficits
-        uR      = U_local*Ct*np.cos(tilt)*np.cos(yaw)/(2.*(1-np.sqrt(1-(Ct*np.cos(tilt)*np.cos(yaw)))))
-        u0      = U_local*np.sqrt(1-Ct)
+        uR      = U_local*Ct*np.cos(tilt)*np.cos(yaw)/(2.*(1-np.sqrt(abs(1-(Ct*np.cos(tilt)*np.cos(yaw))))))
+        u0      = U_local*np.sqrt(abs(1-Ct))
         
         # initial Gaussian wake expansion
         sigma_z0    = D*0.5*np.sqrt( uR/(U_local + u0) )
         sigma_y0    = sigma_z0*(np.cos((yaw)))*(np.cos(veer))
 
         # quantity that determines when the far wake starts
-        x0      = D*(np.cos(yaw)*(1+np.sqrt(1-Ct*np.cos(yaw)))) / (np.sqrt(2)*(4*alpha*TI + 2*beta*(1-np.sqrt(1-Ct)))) + turbine_coord.x
+        x0      = D*(np.cos(yaw)*(1+np.sqrt(abs(1-Ct*np.cos(yaw))))) / (np.sqrt(2)*(4*alpha*TI + 2*beta*(1-np.sqrt(abs(1-Ct))))) + turbine_coord.x
 
         # wake expansion parameters
         ky      = ka*TI + kb 
@@ -223,7 +223,7 @@ class WakeVelocity():
         c = (np.sin(veer)**2)/(2*sigma_y**2) + (np.cos(veer)**2)/(2*sigma_z**2)
         totGauss = np.exp( -( a*((y_locations-turbine_coord.y)-delta)**2 - 2*b*((y_locations-turbine_coord.y)-delta)*((z_locations-HH)) + c*((z_locations-HH))**2 ) )
 
-        velDef = (U_local*(1-np.sqrt(1-((Ct*np.cos(yaw))/(8.0*sigma_y*sigma_z/D**2)) ) )*totGauss)
+        velDef = (U_local*(1-np.sqrt(abs(1-((Ct*np.cos(yaw)))/(8.0*sigma_y*sigma_z/D**2)) ) )*totGauss)
         velDef[x_locations < xR] = 0     
         velDef[x_locations > x0] = 0
               
@@ -241,7 +241,7 @@ class WakeVelocity():
         totGauss = np.exp( -( a*((y_locations-turbine_coord.y)-delta)**2 - 2*b*((y_locations-turbine_coord.y)-delta)*((z_locations-HH)) + c*((z_locations-HH))**2 ) )
         
         # compute velocities in the far wake
-        velDef1 = (U_local*(1-np.sqrt(1-((Ct*np.cos(yaw))/(8.0*sigma_y*sigma_z/D**2)) ) )*totGauss)
+        velDef1 = (U_local*(1-np.sqrt(abs(1-((Ct*np.cos(yaw)))/(8.0*sigma_y*sigma_z/D**2)) ) )*totGauss)
         velDef1[x_locations < x0] = 0
                   
         return np.sqrt(velDef**2 + velDef1**2)

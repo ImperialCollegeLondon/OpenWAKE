@@ -14,6 +14,7 @@ specific language governing permissions and limitations under the License.
 import os
 import numpy as np
 from scipy.optimize import minimize, basinhopping
+from scipy.spatial import distance
 import warnings
 from imperial_floris.turbine_map import TurbineMap
 from imperial_floris.floris import Floris
@@ -115,7 +116,7 @@ def set_iteration_data(x, floris, variables):
                             turbines[t] \
                             for t in range(num_turbines)}
         
-        floris.farm.layout_x, floris.farm.layout_y = x[(v * num_turbines):((v + 1) * num_turbines)],\
+        floris.farm.layout_x, floris.farm.layout_y = x[(v * num_turbines):((v + 1) * num_turbines)], \
                                                      x[((v + 1) * num_turbines):((v + 2) * num_turbines)]
 
         floris.farm.turbine_map = floris.farm.flow_field.turbine_map = TurbineMap(new_turbine_dict)
@@ -126,16 +127,33 @@ def set_iteration_data(x, floris, variables):
     return floris
     
 def calc_power(floris):
-    turbines    = [turbine for _, turbine in floris.farm.flow_field.turbine_map.items()]
+    #turbines    = [turbine for _, turbine in floris.farm.flow_field.turbine_map.items()]
+    turbines = floris.farm.flow_field.turbine_map.turbines
     turbines_power = [turbine.power for turbine in turbines]
     return turbines_power, np.sum(turbines_power)
 
 def power_objective_func(x, floris, variables, data):
     
     floris = set_iteration_data(x, floris, variables)
-    
     floris.farm.flow_field.calculate_wake()
     power = -calc_power(floris)[1]
+    
+    try:
+        v  = variables.index('layout_x')
+        #radii = np.array([turbine.rotor_diameter / 2.0 for turbine in floris.farm.flow_field.turbine_map.turbines])
+        
+        #radii_sum = distance.cdist(radii, radii, lambda r1, r2: r1 + r2)
+        #for r in range(len(radii)):
+        #    radii_sum[r,r] = 0.0
+        
+    except ValueError:
+        pass
+    else:
+        coords = np.array([(c.x, c.y) for c in floris.farm.flow_field.turbine_map.coords])
+        distances = distance.cdist(coords, coords, 'euclidean')
+        radii_sum = floris.farm.flow_field.turbine_map.radii_sum
+        if np.any(distances < radii_sum):
+            power = 0
     
     # data[0] is a row containing headers, data[1][i] contains iteration number i, data[2][i] contains power output at iteration i
     # data[3][i] contains solution x at iteration i, data[4] on contain print strings 
@@ -224,13 +242,13 @@ def optimise_func(floris, variables, minimum_values, maximum_values, name, case,
     print('Number of parameters to optimize = ', len(x0))
     print('=====================================================================')
     
-    minimizer_kwargs = {'args':(floris, variables, data), 'method': 'SLSQP',\
+    minimizer_kwargs = {'args':(floris, variables, data), 'method': 'L-BFGS-B',\
                         'bounds':bnds, \
-                        'options':{'disp':True}}#, 'constraints':ineq_constr}#, unneccessary,
+                        'options':{'disp':True}}#, 'constraints':ineq_constr}#, unneccessary, , niter_success=25
     
     # TODO could also 'basin-hop' intelligently by choosing areas of high flow
     if global_search:
-        residual_plant = basinhopping(power_objective_func, x0, minimizer_kwargs=minimizer_kwargs, niter_success=25, disp=True)
+        residual_plant = basinhopping(power_objective_func, x0, minimizer_kwargs=minimizer_kwargs, niter=500, niter_success=10, disp=True)
         # try method=’L-BFGS-B’
     else:
         residual_plant = minimize(power_objective_func, x0, args=(floris, variables, data), \

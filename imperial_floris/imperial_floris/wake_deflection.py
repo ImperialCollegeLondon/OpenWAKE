@@ -89,11 +89,11 @@ class WakeDeflection():
         U_local = flowfield.initial_flowfield
 
         # initial velocity deficits
-        uR          = U_local*Ct*np.cos(tilt)*np.cos(yaw)/(2.*(1-np.sqrt(1-(Ct*np.cos(tilt)*np.cos(yaw)))))
-        u0          = U_local*np.sqrt(1-Ct)
+        uR          = U_local*Ct*np.cos(tilt)*np.cos(yaw)/(2.*(1-np.sqrt(abs(1-(Ct*np.cos(tilt)*np.cos(yaw))))))
+        u0          = U_local*np.sqrt(abs(1-Ct))
 
         # length of near wake
-        x0      = D*(np.cos(yaw)*(1+np.sqrt(1-Ct*np.cos(yaw)))) / (np.sqrt(2)*(4*alpha*TI + 2*beta*(1-np.sqrt(1-Ct)))) + coord.x
+        x0      = D*(np.cos(yaw)*(1+np.sqrt(abs(1-Ct*np.cos(yaw))))) / (np.sqrt(2)*(4*alpha*TI + 2*beta*(1-np.sqrt(abs(1-Ct))))) + coord.x
 
         # wake expansion parameters
         ky      = ka*TI + kb 
@@ -111,7 +111,7 @@ class WakeDeflection():
         xR = yR*np.tan(yaw) + coord.x
 
         # yaw parameters (skew angle and distance from centerline)  
-        theta_c0    = 2*((0.3*yaw)/np.cos(yaw))*(1-np.sqrt(1-Ct*np.cos(yaw)))    # skew angle   
+        theta_c0    = 2*((0.3*yaw)/np.cos(yaw))*(1-np.sqrt(abs(1-Ct*np.cos(yaw))))    # skew angle   
         delta0      = np.tan(theta_c0)*(x0-coord.x)                            # initial wake deflection
 
         # deflection in the near wake

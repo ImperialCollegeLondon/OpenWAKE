@@ -46,6 +46,14 @@ class TurbineMap():
         self.coords = [coord for coord, _ in self.turbine_map.items()]
         self.turbines = [turbine for _, turbine in self.turbine_map.items()]
         
+        radii = [turbine.rotor_diameter / 2.0 for turbine in self.turbines]
+        radii_range = range(len(radii))
+        radii_sum = np.array([[radii[r1] + radii[r2] for r2 in radii_range] for r1 in radii_range])
+        for r in radii_range:
+            radii_sum[r,r] = 0.0
+        
+        self.radii_sum = radii_sum
+        
     def turbine_at_coord(self, coord):
         return self.turbine_map[coord]
 

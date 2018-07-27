@@ -153,7 +153,7 @@ class Turbine():
 
     def _calculate_ai(self):
         return 0.5 / np.cos(self.yaw_angle) \
-               * (1 - np.sqrt(1 - self.Ct * np.cos(self.yaw_angle) ) )
+               * (1 - np.sqrt(abs(1 - self.Ct * np.cos(self.yaw_angle)) ) )
 
     def _CpCtWs(self):
         cp = self.power_thrust_table["power"]
